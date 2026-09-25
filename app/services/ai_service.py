@@ -54,6 +54,8 @@ def _get_client() -> tuple[OpenAI, Settings]:
     client = OpenAI(
         api_key=settings.openai_api_key,
         timeout=settings.model_timeout_seconds,
+        # Disable SDK retries so a failed request returns within one timeout
+        # instead of up to three timeouts plus backoff.
         max_retries=0,
     )
     return client, settings

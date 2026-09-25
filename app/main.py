@@ -6,7 +6,11 @@ from app.services.ai_service import AIServiceError, analyze_message
 app = FastAPI()
 
 
-@app.post("/analyze", response_model=AnalysisResult)
+@app.post(
+    "/analyze",
+    response_model=AnalysisResult,
+    responses={503: {"description": "AI analysis is temporarily unavailable."}},
+)
 def analyze(analysis_request: AnalysisRequest) -> AnalysisResult:
     try:
         return analyze_message(analysis_request.message)
