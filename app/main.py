@@ -1,27 +1,11 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
 
-
-class AnalysisRequest(BaseModel):
-    message: str
-
-
-class AnalysisResult(BaseModel):
-    category: str
-    urgency: str
-    summary: str
-    entities: dict
-    sentiment: str
+from app.schemas import AnalysisRequest, AnalysisResult
+from app.services.ai_service import analyze_message
 
 app = FastAPI()
 
 
 @app.post("/analyze", response_model=AnalysisResult)
-def analyze_message(analysis_request: AnalysisRequest) -> AnalysisResult:
-    return AnalysisResult(
-        category="billing",
-        urgency="high",
-        summary="Customer reports duplicate billing.",
-        entities={},
-        sentiment="negative",
-    )
+def analyze(analysis_request: AnalysisRequest) -> AnalysisResult:
+    return analyze_message(analysis_request.message)
