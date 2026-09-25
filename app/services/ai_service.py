@@ -1,8 +1,15 @@
 import json
+import logging
+from functools import lru_cache
 
+import openai
 from openai import OpenAI
+from pydantic import ValidationError
 
+from app.config import ConfigurationError, Settings, load_settings
 from app.schemas import AnalysisResult
+
+logger = logging.getLogger(__name__)
 
 MODEL = "gpt-4o-mini"
 ANALYSIS_INSTRUCTIONS = """Analyze the customer support message.
@@ -35,25 +42,72 @@ ANALYSIS_SCHEMA["properties"]["entities"] = {
         "additionalProperties": False,
     },
 }
-_client = OpenAI()
+
+
+class AIServiceError(RuntimeError):
+    pass
+
+
+@lru_cache
+def _get_client() -> tuple[OpenAI, Settings]:
+    settings = load_settings()
+    client = OpenAI(
+        api_key=settings.openai_api_key,
+        timeout=settings.model_timeout_seconds,
+        max_retries=0,
+    )
+    return client, settings
 
 
 def analyze_message(message: str) -> AnalysisResult:
-    response = _client.responses.create(
-        model=MODEL,
-        instructions=ANALYSIS_INSTRUCTIONS,
-        input=message,
-        text={
-            "format": {
-                "type": "json_schema",
-                "name": "analysis_result",
-                "strict": True,
-                "schema": ANALYSIS_SCHEMA,
-            }
-        },
-    )
-    analysis = json.loads(response.output_text)
-    analysis["entities"] = {
-        entity["type"]: entity["value"] for entity in analysis["entities"]
-    }
-    return AnalysisResult.model_validate(analysis)
+    try:
+        client, settings = _get_client()
+    except ConfigurationError as error:
+        logger.error("AI service configuration is invalid: %s", error)
+        raise AIServiceError("AI service is not configured.") from error
+
+    try:
+        response = client.responses.create(
+            model=MODEL,
+            instructions=ANALYSIS_INSTRUCTIONS,
+            input=message,
+            text={
+                "format": {
+                    "type": "json_schema",
+                    "name": "analysis_result",
+                    "strict": True,
+                    "schema": ANALYSIS_SCHEMA,
+                }
+            },
+        )
+    except openai.APITimeoutError as error:
+        logger.warning(
+            "AI provider request timed out provider=openai timeout_seconds=%s",
+            settings.model_timeout_seconds,
+        )
+        raise AIServiceError("AI provider request timed out.") from error
+    except openai.APIError as error:
+        logger.error(
+            "AI provider request failed provider=openai error_type=%s",
+            type(error).__name__,
+        )
+        raise AIServiceError("AI provider request failed.") from error
+
+    try:
+        analysis = json.loads(response.output_text)
+        analysis["entities"] = {
+            entity["type"]: entity["value"] for entity in analysis["entities"]
+        }
+        return AnalysisResult.model_validate(analysis)
+    except (
+        AttributeError,
+        json.JSONDecodeError,
+        KeyError,
+        TypeError,
+        ValidationError,
+    ) as error:
+        logger.error(
+            "AI provider returned an invalid response provider=openai error_type=%s",
+            type(error).__name__,
+        )
+        raise AIServiceError("AI provider returned an invalid response.") from error
