@@ -3,7 +3,7 @@ import logging
 from functools import lru_cache
 
 import openai
-from openai import OpenAI
+from openai import AsyncOpenAI
 from pydantic import ValidationError
 
 from app.config import ConfigurationError, Settings, load_settings
@@ -49,9 +49,9 @@ class AIServiceError(RuntimeError):
 
 
 @lru_cache
-def _get_client() -> tuple[OpenAI, Settings]:
+def _get_client() -> tuple[AsyncOpenAI, Settings]:
     settings = load_settings()
-    client = OpenAI(
+    client = AsyncOpenAI(
         api_key=settings.openai_api_key,
         timeout=settings.model_timeout_seconds,
         # Disable SDK retries so a failed request returns within one timeout
@@ -61,7 +61,7 @@ def _get_client() -> tuple[OpenAI, Settings]:
     return client, settings
 
 
-def analyze_message(message: str) -> AnalysisResult:
+async def analyze_message(message: str) -> AnalysisResult:
     try:
         client, settings = _get_client()
     except ConfigurationError as error:
@@ -69,7 +69,7 @@ def analyze_message(message: str) -> AnalysisResult:
         raise AIServiceError("AI service is not configured.") from error
 
     try:
-        response = client.responses.create(
+        response = await client.responses.create(
             model=MODEL,
             instructions=ANALYSIS_INSTRUCTIONS,
             input=message,

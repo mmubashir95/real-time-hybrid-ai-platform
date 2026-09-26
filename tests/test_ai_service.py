@@ -1,7 +1,7 @@
 import json
 import unittest
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import openai
 
@@ -10,7 +10,7 @@ from app.schemas import AnalysisResult
 from app.services.ai_service import AIServiceError, _get_client, analyze_message
 
 
-class AIServiceTests(unittest.TestCase):
+class AIServiceTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.client = Mock()
         self.settings = Settings(
@@ -33,7 +33,7 @@ class AIServiceTests(unittest.TestCase):
                 "app.services.ai_service.load_settings",
                 return_value=self.settings,
             ),
-            patch("app.services.ai_service.OpenAI") as openai_client,
+            patch("app.services.ai_service.AsyncOpenAI") as openai_client,
         ):
             client, settings = _get_client()
 
@@ -45,55 +45,59 @@ class AIServiceTests(unittest.TestCase):
         self.assertIs(client, openai_client.return_value)
         self.assertEqual(settings, self.settings)
 
-    def test_valid_provider_response_returns_analysis_result(self) -> None:
-        self.client.responses.create.return_value = SimpleNamespace(
-            output_text=json.dumps(
-                {
-                    "category": "billing",
-                    "urgency": "high",
-                    "summary": "Customer reports duplicate billing.",
-                    "entities": [{"type": "amount", "value": "$10"}],
-                    "sentiment": "negative",
-                }
+    async def test_valid_provider_response_returns_analysis_result(self) -> None:
+        self.client.responses.create = AsyncMock(
+            return_value=SimpleNamespace(
+                output_text=json.dumps(
+                    {
+                        "category": "billing",
+                        "urgency": "high",
+                        "summary": "Customer reports duplicate billing.",
+                        "entities": [{"type": "amount", "value": "$10"}],
+                        "sentiment": "negative",
+                    }
+                )
             )
         )
 
-        result = analyze_message("I was charged $10 twice.")
+        result = await analyze_message("I was charged $10 twice.")
 
         self.assertIsInstance(result, AnalysisResult)
         self.assertEqual(result.entities, {"amount": "$10"})
 
-    def test_missing_configuration_is_controlled(self) -> None:
+    async def test_missing_configuration_is_controlled(self) -> None:
         with patch(
             "app.services.ai_service._get_client",
             side_effect=ConfigurationError("OPENAI_API_KEY is required."),
         ):
             with self.assertRaisesRegex(AIServiceError, "not configured"):
-                analyze_message("Hello")
+                await analyze_message("Hello")
 
-    def test_timeout_is_controlled(self) -> None:
-        self.client.responses.create.side_effect = openai.APITimeoutError(
-            request=Mock()
+    async def test_timeout_is_controlled(self) -> None:
+        self.client.responses.create = AsyncMock(
+            side_effect=openai.APITimeoutError(request=Mock())
         )
 
         with self.assertRaisesRegex(AIServiceError, "timed out"):
-            analyze_message("Hello")
+            await analyze_message("Hello")
 
-    def test_provider_failure_is_controlled(self) -> None:
-        self.client.responses.create.side_effect = openai.APIError(
-            "Provider failure", Mock(), body=None
+    async def test_provider_failure_is_controlled(self) -> None:
+        self.client.responses.create = AsyncMock(
+            side_effect=openai.APIError("Provider failure", Mock(), body=None)
         )
 
         with self.assertRaisesRegex(AIServiceError, "request failed"):
-            analyze_message("Hello")
+            await analyze_message("Hello")
 
-    def test_malformed_response_is_controlled(self) -> None:
-        self.client.responses.create.return_value = SimpleNamespace(
-            output_text='{"category": "billing", "entities": []}'
+    async def test_malformed_response_is_controlled(self) -> None:
+        self.client.responses.create = AsyncMock(
+            return_value=SimpleNamespace(
+                output_text='{"category": "billing", "entities": []}'
+            )
         )
 
         with self.assertRaisesRegex(AIServiceError, "invalid response"):
-            analyze_message("Hello")
+            await analyze_message("Hello")
 
 
 if __name__ == "__main__":

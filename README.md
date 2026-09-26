@@ -12,6 +12,21 @@ uvicorn app.main:app --reload
 
 The app reads these settings from the environment. A `.env` file is not loaded automatically.
 
+## Async behavior
+
+Both `/analyze` and `/async-demo` are asynchronous because they wait for I/O-like
+operations. `/analyze` awaits the OpenAI SDK's async HTTP call, while `/async-demo`
+uses `await asyncio.sleep(...)` to demonstrate the same scheduling behavior without
+calling an external service. Start and finish logs for `/async-demo` include a
+request ID, so overlapping requests can be observed.
+
+`async def` makes a function a coroutine, but does not make blocking code
+asynchronous. At `await`, a non-blocking operation pauses that coroutine and returns
+control to the event loop, allowing another request to run. `time.sleep(...)` would
+instead block the event-loop thread, so it is not used in either async request path.
+Cancellation is also delivered at an await point: if the coroutine is cancelled
+while waiting, `asyncio.CancelledError` propagates instead of being swallowed.
+
 ## Test
 
 ```bash
