@@ -19,20 +19,23 @@ def format_sse(event: str, payload: dict[str, object]) -> str:
     return f"event: {event}\ndata: {json.dumps(payload, separators=(',', ':'))}\n\n"
 
 
+def _error_event(code: str, message: str) -> str:
+    return format_sse("error", {"code": code, "message": message})
+
+
 async def stream_analysis(
     request: Request,
     session: AsyncSession,
     message: str,
 ) -> AsyncIterator[str]:
-    """Run the existing analysis flow while reporting truthful stage boundaries."""
+    """Run the existing analysis flow while reporting truthful stage boundaries.
+
+    Client disconnects are mainly handled by Starlette: under uvicorn,
+    StreamingResponse cancels this generator at whatever it is awaiting (for
+    example the model call), and CancelledError propagates so cleanup runs.
+    """
     try:
-        if await request.is_disconnected():
-            return
-
         yield format_sse("processing_started", {"status": "processing"})
-
-        if await request.is_disconnected():
-            return
 
         started_at = perf_counter()
         try:
@@ -41,22 +44,17 @@ async def stream_analysis(
             logger.warning(
                 "Streaming AI analysis failed error_type=%s", type(error).__name__
             )
-            if not await request.is_disconnected():
-                yield format_sse(
-                    "error",
-                    {
-                        "code": "AI_UNAVAILABLE",
-                        "message": "AI analysis is temporarily unavailable.",
-                    },
-                )
-            return
-
-        if await request.is_disconnected():
+            yield _error_event(
+                "AI_UNAVAILABLE", "AI analysis is temporarily unavailable."
+            )
             return
 
         yield format_sse("analysis_complete", analysis.model_dump())
 
+        # Servers that do not cancel on disconnect only notice it when a send fails.
+        # Checking here means a result is never stored for a client that has left.
         if await request.is_disconnected():
+            logger.info("Analysis stream client disconnected before persistence")
             return
 
         latency_ms = max(0, round((perf_counter() - started_at) * 1000))
@@ -67,30 +65,25 @@ async def stream_analysis(
                 "Streaming analysis persistence failed error_type=%s",
                 type(error).__name__,
             )
-            if not await request.is_disconnected():
-                yield format_sse(
-                    "error",
-                    {
-                        "code": "STORAGE_UNAVAILABLE",
-                        "message": "Analysis storage is temporarily unavailable.",
-                    },
-                )
-            return
-
-        if await request.is_disconnected():
+            yield _error_event(
+                "STORAGE_UNAVAILABLE", "Analysis storage is temporarily unavailable."
+            )
             return
 
         yield format_sse("saved", {"analysis_id": record.id})
-
-        if await request.is_disconnected():
-            return
-
         yield format_sse(
             "completed",
             {"status": "completed", "analysis_id": record.id},
         )
     except asyncio.CancelledError:
-        # StreamingResponse cancellation should also cancel an awaited provider or
-        # database operation when its client supports cooperative cancellation.
-        logger.info("Analysis stream cancelled after client disconnect")
+        # Raised on client disconnect or server shutdown; re-raise so cleanup runs.
+        logger.info("Analysis stream cancelled")
         raise
+    except Exception as error:
+        # The 200 headers are already sent, so an unexpected failure can only be
+        # reported in-band. CancelledError is a BaseException and is not caught here.
+        logger.error(
+            "Streaming analysis failed unexpectedly error_type=%s",
+            type(error).__name__,
+        )
+        yield _error_event("INTERNAL_ERROR", "Analysis failed.")

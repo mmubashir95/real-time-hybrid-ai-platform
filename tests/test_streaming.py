@@ -45,10 +45,6 @@ class StreamingRouteTests(unittest.TestCase):
 
     def test_successful_stream_has_ordered_json_events(self) -> None:
         with patch(
-            "app.services.streaming_service.Request.is_disconnected",
-            new_callable=AsyncMock,
-            return_value=False,
-        ), patch(
             "app.services.streaming_service.analyze_message",
             new_callable=AsyncMock,
             return_value=self.analysis,
@@ -107,10 +103,6 @@ class StreamingRouteTests(unittest.TestCase):
         )
         for failure in failures:
             with self.subTest(failure=failure), patch(
-                "app.services.streaming_service.Request.is_disconnected",
-                new_callable=AsyncMock,
-                return_value=False,
-            ), patch(
                 "app.services.streaming_service.analyze_message",
                 new_callable=AsyncMock,
                 side_effect=AIServiceError(failure),
@@ -134,10 +126,6 @@ class StreamingRouteTests(unittest.TestCase):
 
     def test_database_failure_stops_before_saved_and_completed(self) -> None:
         with patch(
-            "app.services.streaming_service.Request.is_disconnected",
-            new_callable=AsyncMock,
-            return_value=False,
-        ), patch(
             "app.services.streaming_service.analyze_message",
             new_callable=AsyncMock,
             return_value=self.analysis,
@@ -158,11 +146,68 @@ class StreamingRouteTests(unittest.TestCase):
         self.assertEqual(events[-1][1]["code"], "STORAGE_UNAVAILABLE")
         self.assertNotIn("secret", response.text)
 
+    def test_unexpected_failure_emits_terminal_internal_error(self) -> None:
+        with patch(
+            "app.services.streaming_service.analyze_message",
+            new_callable=AsyncMock,
+            return_value=self.analysis,
+        ), patch(
+            "app.services.streaming_service.save_analysis",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("secret internal detail"),
+        ):
+            response = self.client.post(
+                "/analyze/stream", json={"message": "Hello"}
+            )
+
+        events = parse_sse(response.text)
+        self.assertEqual(
+            [event for event, _payload in events],
+            ["processing_started", "analysis_complete", "error"],
+        )
+        self.assertEqual(events[-1][1]["code"], "INTERNAL_ERROR")
+        self.assertNotIn("secret", response.text)
+
+    def test_session_stays_open_until_stream_finishes(self) -> None:
+        # The stream saves after the endpoint function has returned, so the
+        # session dependency must only be cleaned up once the response finishes.
+        session_closed = False
+
+        async def tracked_session():
+            nonlocal session_closed
+            try:
+                yield self.session
+            finally:
+                session_closed = True
+
+        app.dependency_overrides[get_session] = tracked_session
+        closed_when_saving = []
+
+        async def save(*_args: object) -> SimpleNamespace:
+            closed_when_saving.append(session_closed)
+            return SimpleNamespace(id=7)
+
+        with patch(
+            "app.services.streaming_service.analyze_message",
+            new_callable=AsyncMock,
+            return_value=self.analysis,
+        ), patch(
+            "app.services.streaming_service.save_analysis",
+            side_effect=save,
+        ):
+            response = self.client.post(
+                "/analyze/stream", json={"message": "Hello"}
+            )
+
+        self.assertEqual(parse_sse(response.text)[-1][0], "completed")
+        self.assertEqual(closed_when_saving, [False])
+        self.assertTrue(session_closed)
+
 
 class StreamingCancellationTests(unittest.IsolatedAsyncioTestCase):
     async def test_disconnect_after_model_call_skips_persistence(self) -> None:
         request = Mock()
-        request.is_disconnected = AsyncMock(side_effect=(False, False, True))
+        request.is_disconnected = AsyncMock(return_value=True)
         session = Mock(spec=AsyncSession)
         analysis = AnalysisResult(
             category="general",
@@ -184,7 +229,7 @@ class StreamingCancellationTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             [event for event, _payload in parse_sse("".join(events))],
-            ["processing_started"],
+            ["processing_started", "analysis_complete"],
         )
         save_analysis.assert_not_awaited()
 
@@ -260,10 +305,6 @@ class StreamingConcurrencyTests(unittest.IsolatedAsyncioTestCase):
             return SimpleNamespace(id={"message-a": 1, "message-b": 2}[message])
 
         with patch(
-            "app.services.streaming_service.Request.is_disconnected",
-            new_callable=AsyncMock,
-            return_value=False,
-        ), patch(
             "app.services.streaming_service.analyze_message",
             side_effect=analyze,
         ), patch(

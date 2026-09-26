@@ -97,14 +97,25 @@ completed
 ```
 
 Classification and extraction are represented by one `analysis_complete` event
-because the provider produces all structured fields in one model call. Model or
-storage failures produce one terminal `error` event, followed by a cleanly closed
-connection. Each `data:` value is JSON.
+because the provider produces all structured fields in one model call. Each `data:`
+value is JSON.
 
-The server checks for disconnects before expensive work and before persistence and
-later events. Cancellation of in-flight provider/network work is cooperative: the
-async SDK normally receives cancellation when the streaming task is cancelled, but
-the remote provider may already have begun processing the request.
+Any failure produces one terminal `error` event, followed by a cleanly closed
+connection. Its `code` is `AI_UNAVAILABLE`, `STORAGE_UNAVAILABLE`, or
+`INTERNAL_ERROR`, and no `saved` or `completed` event follows it. If the connection
+ends without either `completed` or `error`, treat the analysis as failed.
+
+**Disconnects:** when the client disconnects, uvicorn and Starlette cancel the
+stream at whatever it is awaiting, including the model call. The stream also checks
+for a disconnect just before saving. If the client leaves before `saved`, nothing is
+stored and no analysis ID exists, even if `analysis_complete` was already sent. This
+differs from `POST /analyze`, which finishes and stores the result even if the
+caller disconnects. Cancelling the in-flight model call is cooperative: the async
+SDK stops waiting, but the remote provider may already have begun processing (and
+billing for) the request.
+
+**Browser clients:** native `EventSource` only supports GET requests, so it cannot
+call this POST endpoint. Use `fetch()` and read `response.body` as a stream instead.
 
 ## Async behavior
 
