@@ -3,15 +3,26 @@ Real-Time Hybrid AI Support &amp; Operations Platform
 
 ## Run locally
 
+Requires a running PostgreSQL server. The commands below connect as your OS user,
+which is the default for a local Homebrew or Postgres.app install.
+
 ```bash
 pip install -r requirements.txt
+
+# One-time database setup: create the database AND its table.
+createdb realtime_ai
+psql -d realtime_ai -f schema.sql
+
 export OPENAI_API_KEY=your-key
 export MODEL_TIMEOUT_SECONDS=30  # optional, defaults to 30
-export DATABASE_URL=postgresql+asyncpg://app_user:password@localhost:5432/ai_platform
+export DATABASE_URL=postgresql+asyncpg://localhost:5432/realtime_ai
 uvicorn app.main:app --reload
 ```
 
-The app reads these settings from the environment. A `.env` file is not loaded automatically.
+The app reads these settings from the environment. A `.env` file is not loaded
+automatically. If your PostgreSQL role needs a password, use
+`postgresql+asyncpg://user:password@localhost:5432/realtime_ai`. Never commit real
+values; `.env.example` holds placeholders only.
 
 ## PostgreSQL persistence
 
@@ -22,17 +33,22 @@ model-call latency. Entities use PostgreSQL JSONB because they are structured JS
 and may need to be queried by key later.
 
 This project does not yet have a migration system. For this single initial table,
-[`schema.sql`](schema.sql) is the reproducible schema definition:
+[`schema.sql`](schema.sql) is the reproducible schema definition and must be applied
+once per database (see "Run locally"). The app does not create tables on startup.
 
-```bash
-createdb ai_platform
-psql postgresql://app_user:password@localhost:5432/ai_platform -f schema.sql
-```
-
-Set `DATABASE_URL` to the equivalent async URL used by the application. Both
-`OPENAI_API_KEY` and `DATABASE_URL` are required; startup imports remain safe, and
-requests fail with controlled service-unavailable responses when storage is not
+Both `OPENAI_API_KEY` and `DATABASE_URL` are required; startup imports remain safe,
+and requests fail with controlled service-unavailable responses when storage is not
 configured or available.
+
+**Troubleshooting:** if `/analyze` or `/analyses/{id}` returns 503 "Analysis storage
+is temporarily unavailable", check the server log:
+
+- `error_type=UndefinedTableError`: the database exists but `schema.sql` was not
+  applied. Run `psql -d realtime_ai -f schema.sql`.
+- `error_type=OSError`: PostgreSQL is not running or `DATABASE_URL` points at the
+  wrong host or port.
+- `error_type=InvalidCatalogNameError`: the database does not exist. Run
+  `createdb realtime_ai`.
 
 ### Manual verification
 

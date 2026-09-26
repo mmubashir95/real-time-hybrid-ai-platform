@@ -1,9 +1,18 @@
 import asyncio
 import logging
 from time import perf_counter
+from typing import Annotated
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi import (
+    Depends,
+    FastAPI,
+    HTTPException,
+    Path,
+    Request,
+    Response,
+    status,
+)
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +33,7 @@ app = FastAPI()
 logger = logging.getLogger(__name__)
 
 ASYNC_DEMO_DELAY_SECONDS = 3.0
+POSTGRES_INTEGER_MAX = 2_147_483_647
 
 
 @app.exception_handler(DatabaseError)
@@ -99,7 +109,9 @@ async def analyze(
     },
 )
 async def get_analysis(
-    analysis_id: int,
+    # Bounded to the PostgreSQL INTEGER range so out-of-range IDs are rejected
+    # with 422 instead of reaching the database and surfacing as a storage 503.
+    analysis_id: Annotated[int, Path(ge=1, le=POSTGRES_INTEGER_MAX)],
     session: AsyncSession = Depends(get_session),
 ) -> AnalysisRecord:
     record = await get_analysis_by_id(session, analysis_id)

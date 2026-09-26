@@ -69,6 +69,16 @@ class AnalysisRepositoryTests(unittest.IsolatedAsyncioTestCase):
 
         self.session.rollback.assert_awaited_once_with()
 
+    async def test_unreachable_database_on_save_is_controlled(self) -> None:
+        # asyncpg raises a bare OSError (not a SQLAlchemyError) on connection refused.
+        self.session.flush.side_effect = OSError("Connect call failed")
+
+        with self.assertRaisesRegex(DatabaseError, "Failed to save"):
+            await save_analysis(self.session, "Hello", self.analysis, 1)
+
+        self.session.commit.assert_not_awaited()
+        self.session.rollback.assert_awaited_once_with()
+
     async def test_get_analysis_returns_database_record(self) -> None:
         expected = AnalysisRecord(
             id=42,
@@ -91,6 +101,12 @@ class AnalysisRepositoryTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_get_analysis_failure_is_controlled(self) -> None:
         self.session.execute.side_effect = SQLAlchemyError("connection secret")
+
+        with self.assertRaisesRegex(DatabaseError, "Failed to retrieve"):
+            await get_analysis_by_id(self.session, 42)
+
+    async def test_unreachable_database_on_get_is_controlled(self) -> None:
+        self.session.execute.side_effect = OSError("Connect call failed")
 
         with self.assertRaisesRegex(DatabaseError, "Failed to retrieve"):
             await get_analysis_by_id(self.session, 42)

@@ -10,6 +10,20 @@ from app.schemas import AnalysisResult
 
 logger = logging.getLogger(__name__)
 
+# asyncpg raises a raw OSError when PostgreSQL is unreachable; SQLAlchemy does not
+# wrap connection-refused errors, so both must be caught to return a controlled 503.
+DATABASE_ERRORS = (SQLAlchemyError, OSError)
+
+
+def _error_type(error: BaseException) -> str:
+    """Name the driver-level cause (e.g. UndefinedTableError) without leaking details.
+
+    SQLAlchemy wraps the DBAPI error in `error.orig`, and its asyncpg adapter in turn
+    keeps the original asyncpg exception as `orig.__cause__`.
+    """
+    original = getattr(error, "orig", None)
+    return type(getattr(original, "__cause__", None) or original or error).__name__
+
 
 async def save_analysis(
     session: AsyncSession,
@@ -31,17 +45,15 @@ async def save_analysis(
         await session.flush()
         await session.refresh(record)
         await session.commit()
-    except SQLAlchemyError as error:
+    except DATABASE_ERRORS as error:
         try:
             await session.rollback()
-        except SQLAlchemyError as rollback_error:
+        except DATABASE_ERRORS as rollback_error:
             logger.error(
                 "Failed to roll back analysis transaction error_type=%s",
-                type(rollback_error).__name__,
+                _error_type(rollback_error),
             )
-        logger.error(
-            "Failed to save analysis error_type=%s", type(error).__name__
-        )
+        logger.error("Failed to save analysis error_type=%s", _error_type(error))
         raise DatabaseError("Failed to save analysis.") from error
 
     return record
@@ -54,9 +66,9 @@ async def get_analysis_by_id(
         result = await session.execute(
             select(AnalysisRecord).where(AnalysisRecord.id == analysis_id)
         )
-    except SQLAlchemyError as error:
+    except DATABASE_ERRORS as error:
         logger.error(
-            "Failed to retrieve analysis error_type=%s", type(error).__name__
+            "Failed to retrieve analysis error_type=%s", _error_type(error)
         )
         raise DatabaseError("Failed to retrieve analysis.") from error
 

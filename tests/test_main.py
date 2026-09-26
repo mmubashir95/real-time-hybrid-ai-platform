@@ -169,6 +169,17 @@ class GetAnalysisRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json(), {"detail": "Analysis not found."})
 
+    def test_out_of_range_id_is_rejected_before_database(self) -> None:
+        with patch(
+            "app.main.get_analysis_by_id", new_callable=AsyncMock
+        ) as get_analysis:
+            for analysis_id in ("0", "-1", "2147483648"):
+                with self.subTest(analysis_id=analysis_id):
+                    response = self.client.get(f"/analyses/{analysis_id}")
+                    self.assertEqual(response.status_code, 422)
+
+        get_analysis.assert_not_awaited()
+
 
 class AsyncDemoTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:

@@ -6,6 +6,7 @@ CREATE TABLE analyses (
     summary TEXT NOT NULL,
     entities JSONB NOT NULL,
     sentiment VARCHAR(50) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    latency_ms INTEGER NOT NULL CHECK (latency_ms >= 0)
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    latency_ms INTEGER NOT NULL,
+    CONSTRAINT ck_analyses_latency_ms_nonnegative CHECK (latency_ms >= 0)
 );
