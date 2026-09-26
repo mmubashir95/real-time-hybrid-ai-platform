@@ -13,7 +13,7 @@ from fastapi import (
     Response,
     status,
 )
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import DatabaseError, get_session
@@ -24,6 +24,7 @@ from app.repositories.analysis_repository import (
 )
 from app.schemas import AnalysisRequest, AnalysisResult, StoredAnalysis
 from app.services.ai_service import AIServiceError, analyze_message
+from app.services.streaming_service import stream_analysis
 
 # Uvicorn only configures its own loggers; without this, app INFO logs (such as
 # the /async-demo start/finish lines) are dropped.
@@ -98,6 +99,33 @@ async def analyze(
     response.headers["X-Analysis-ID"] = str(record.id)
     response.headers["Location"] = f"/analyses/{record.id}"
     return analysis
+
+
+@app.post(
+    "/analyze/stream",
+    response_class=StreamingResponse,
+    responses={
+        200: {
+            "content": {"text/event-stream": {}},
+            "description": "Analysis progress as Server-Sent Events.",
+        },
+        503: {"description": "Analysis storage is unavailable before streaming."},
+    },
+)
+async def analyze_stream(
+    analysis_request: AnalysisRequest,
+    request: Request,
+    # Request scope keeps the session open until StreamingResponse finishes.
+    session: AsyncSession = Depends(get_session, scope="request"),
+) -> StreamingResponse:
+    return StreamingResponse(
+        stream_analysis(request, session, analysis_request.message),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.get(

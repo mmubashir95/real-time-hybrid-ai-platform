@@ -74,6 +74,38 @@ The response includes `id`, `message`, all analysis fields, `created_at`, and
 same `DATABASE_URL`, and repeat the GET request. The record should still be
 returned because it is stored in PostgreSQL rather than application memory.
 
+## Server-Sent Events
+
+`POST /analyze/stream` runs the same AI service and persistence path as
+`POST /analyze`, but reports progress over Server-Sent Events. Use `curl -N` to
+disable client-side output buffering and see events as they arrive:
+
+```bash
+curl -N -X POST http://127.0.0.1:8000/analyze/stream \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -d '{"message":"I was charged twice for my subscription."}'
+```
+
+A successful stream emits these events in order:
+
+```text
+processing_started
+analysis_complete
+saved
+completed
+```
+
+Classification and extraction are represented by one `analysis_complete` event
+because the provider produces all structured fields in one model call. Model or
+storage failures produce one terminal `error` event, followed by a cleanly closed
+connection. Each `data:` value is JSON.
+
+The server checks for disconnects before expensive work and before persistence and
+later events. Cancellation of in-flight provider/network work is cooperative: the
+async SDK normally receives cancellation when the streaming task is cancelled, but
+the remote provider may already have begun processing the request.
+
 ## Async behavior
 
 Both `/analyze` and `/async-demo` are asynchronous because they wait for I/O-like
