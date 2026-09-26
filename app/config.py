@@ -13,6 +13,7 @@ class ConfigurationError(RuntimeError):
 class Settings:
     openai_api_key: str
     model_timeout_seconds: float
+    database_url: str
 
 
 def load_settings() -> Settings:
@@ -35,7 +36,16 @@ def load_settings() -> Settings:
             "MODEL_TIMEOUT_SECONDS must be a positive number."
         )
 
+    database_url = os.getenv("DATABASE_URL", "").strip()
+    if not database_url:
+        raise ConfigurationError("DATABASE_URL is required.")
+    if not database_url.startswith("postgresql+asyncpg://"):
+        raise ConfigurationError(
+            "DATABASE_URL must use the postgresql+asyncpg:// scheme."
+        )
+
     return Settings(
         openai_api_key=openai_api_key,
         model_timeout_seconds=model_timeout_seconds,
+        database_url=database_url,
     )

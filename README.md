@@ -7,10 +7,56 @@ Real-Time Hybrid AI Support &amp; Operations Platform
 pip install -r requirements.txt
 export OPENAI_API_KEY=your-key
 export MODEL_TIMEOUT_SECONDS=30  # optional, defaults to 30
+export DATABASE_URL=postgresql+asyncpg://app_user:password@localhost:5432/ai_platform
 uvicorn app.main:app --reload
 ```
 
 The app reads these settings from the environment. A `.env` file is not loaded automatically.
+
+## PostgreSQL persistence
+
+Phase 7 uses SQLAlchemy's async session support with the `asyncpg` driver. Database
+network I/O is awaited, so it does not block the FastAPI event loop. The `analyses`
+table stores the submitted message, structured model result, creation time, and
+model-call latency. Entities use PostgreSQL JSONB because they are structured JSON
+and may need to be queried by key later.
+
+This project does not yet have a migration system. For this single initial table,
+[`schema.sql`](schema.sql) is the reproducible schema definition:
+
+```bash
+createdb ai_platform
+psql postgresql://app_user:password@localhost:5432/ai_platform -f schema.sql
+```
+
+Set `DATABASE_URL` to the equivalent async URL used by the application. Both
+`OPENAI_API_KEY` and `DATABASE_URL` are required; startup imports remain safe, and
+requests fail with controlled service-unavailable responses when storage is not
+configured or available.
+
+### Manual verification
+
+Start PostgreSQL, apply `schema.sql`, export the environment variables above, and
+start FastAPI. Submit a message with response headers included:
+
+```bash
+curl -i -X POST http://127.0.0.1:8000/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"message":"I was charged twice for my subscription."}'
+```
+
+The response body remains the existing analysis contract. The `X-Analysis-ID`
+header contains the stored ID, and `Location` gives its retrieval path. Retrieve
+the row using that ID:
+
+```bash
+curl http://127.0.0.1:8000/analyses/1
+```
+
+The response includes `id`, `message`, all analysis fields, `created_at`, and
+`latency_ms`. To verify true persistence, stop FastAPI, start it again with the
+same `DATABASE_URL`, and repeat the GET request. The record should still be
+returned because it is stored in PostgreSQL rather than application memory.
 
 ## Async behavior
 

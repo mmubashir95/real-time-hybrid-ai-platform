@@ -2,20 +2,32 @@ import ast
 import asyncio
 import inspect
 import unittest
+from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import app.main as main_module
 import app.services.ai_service as ai_service_module
+from app.database import DatabaseError, get_session
 from app.main import app, fake_async_model_call
+from app.schemas import AnalysisResult
 from app.services.ai_service import AIServiceError
 
 
 class AnalyzeRouteTests(unittest.TestCase):
     def setUp(self) -> None:
+        self.session = Mock(spec=AsyncSession)
+
+        async def override_session():
+            yield self.session
+
+        app.dependency_overrides[get_session] = override_session
+        self.addCleanup(app.dependency_overrides.clear)
         self.client = TestClient(app)
 
     def test_invalid_requests_are_rejected_before_service_call(self) -> None:
@@ -57,15 +69,105 @@ class AnalyzeRouteTests(unittest.TestCase):
         with patch(
             "app.main.analyze_message",
             new_callable=AsyncMock,
-            return_value=expected,
-        ) as analyze_message:
+            return_value=AnalysisResult.model_validate(expected),
+        ) as analyze_message, patch(
+            "app.main.save_analysis",
+            new_callable=AsyncMock,
+            return_value=SimpleNamespace(id=42),
+        ) as save_analysis:
             response = self.client.post(
                 "/analyze", json={"message": "I was charged twice."}
             )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), expected)
+        self.assertEqual(response.headers["X-Analysis-ID"], "42")
+        self.assertEqual(response.headers["Location"], "/analyses/42")
         analyze_message.assert_awaited_once_with("I was charged twice.")
+        save_analysis.assert_awaited_once()
+        saved_session, saved_message, saved_analysis, latency_ms = (
+            save_analysis.await_args.args
+        )
+        self.assertIs(saved_session, self.session)
+        self.assertEqual(saved_message, "I was charged twice.")
+        self.assertEqual(saved_analysis.model_dump(), expected)
+        self.assertGreaterEqual(latency_ms, 0)
+
+    def test_database_failure_returns_safe_503(self) -> None:
+        analysis = AnalysisResult(
+            category="billing",
+            urgency="high",
+            summary="Duplicate charge.",
+            entities={"amount": "$10"},
+            sentiment="negative",
+        )
+        with patch(
+            "app.main.analyze_message",
+            new_callable=AsyncMock,
+            return_value=analysis,
+        ), patch(
+            "app.main.save_analysis",
+            new_callable=AsyncMock,
+            side_effect=DatabaseError("postgresql://secret@host/database"),
+        ):
+            response = self.client.post("/analyze", json={"message": "Hello"})
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(
+            response.json(),
+            {"detail": "Analysis storage is temporarily unavailable."},
+        )
+        self.assertNotIn("secret", response.text)
+
+
+class GetAnalysisRouteTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.session = Mock(spec=AsyncSession)
+
+        async def override_session():
+            yield self.session
+
+        app.dependency_overrides[get_session] = override_session
+        self.addCleanup(app.dependency_overrides.clear)
+        self.client = TestClient(app)
+
+    def test_stored_analysis_is_returned(self) -> None:
+        record = SimpleNamespace(
+            id=42,
+            message="I was charged twice.",
+            category="billing",
+            urgency="high",
+            summary="Duplicate charge.",
+            entities={"amount": "$10"},
+            sentiment="negative",
+            created_at=datetime(2026, 9, 26, 10, 0, tzinfo=UTC),
+            latency_ms=125,
+        )
+        with patch(
+            "app.main.get_analysis_by_id",
+            new_callable=AsyncMock,
+            return_value=record,
+        ) as get_analysis:
+            response = self.client.get("/analyses/42")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["id"], 42)
+        self.assertEqual(response.json()["message"], "I was charged twice.")
+        self.assertEqual(response.json()["entities"], {"amount": "$10"})
+        self.assertEqual(response.json()["latency_ms"], 125)
+        self.assertIsNotNone(response.json()["created_at"])
+        get_analysis.assert_awaited_once_with(self.session, 42)
+
+    def test_unknown_analysis_returns_404(self) -> None:
+        with patch(
+            "app.main.get_analysis_by_id",
+            new_callable=AsyncMock,
+            return_value=None,
+        ):
+            response = self.client.get("/analyses/999")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"detail": "Analysis not found."})
 
 
 class AsyncDemoTests(unittest.IsolatedAsyncioTestCase):

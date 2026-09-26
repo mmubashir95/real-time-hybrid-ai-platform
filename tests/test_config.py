@@ -2,7 +2,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from app.config import ConfigurationError, load_settings
+from app.config import ConfigurationError, Settings, load_settings
 
 
 class SettingsTests(unittest.TestCase):
@@ -19,6 +19,9 @@ class SettingsTests(unittest.TestCase):
                     {
                         "OPENAI_API_KEY": "test-key",
                         "MODEL_TIMEOUT_SECONDS": timeout,
+                        "DATABASE_URL": (
+                            "postgresql+asyncpg://user:password@localhost/test"
+                        ),
                     },
                     clear=True,
                 ):
@@ -26,6 +29,45 @@ class SettingsTests(unittest.TestCase):
                         ConfigurationError, "MODEL_TIMEOUT_SECONDS"
                     ):
                         load_settings()
+
+    def test_missing_database_url_is_rejected(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"OPENAI_API_KEY": "test-key"},
+            clear=True,
+        ):
+            with self.assertRaisesRegex(ConfigurationError, "DATABASE_URL"):
+                load_settings()
+
+    def test_database_url_requires_asyncpg_scheme(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "OPENAI_API_KEY": "test-key",
+                "DATABASE_URL": "postgresql://user:password@localhost/test",
+            },
+            clear=True,
+        ):
+            with self.assertRaisesRegex(ConfigurationError, r"postgresql\+asyncpg"):
+                load_settings()
+
+    def test_valid_settings_are_loaded(self) -> None:
+        environment = {
+            "OPENAI_API_KEY": "test-key",
+            "MODEL_TIMEOUT_SECONDS": "12",
+            "DATABASE_URL": "postgresql+asyncpg://user:password@localhost/test",
+        }
+        with patch.dict(os.environ, environment, clear=True):
+            settings = load_settings()
+
+        self.assertEqual(
+            settings,
+            Settings(
+                openai_api_key="test-key",
+                model_timeout_seconds=12.0,
+                database_url=environment["DATABASE_URL"],
+            ),
+        )
 
 
 if __name__ == "__main__":

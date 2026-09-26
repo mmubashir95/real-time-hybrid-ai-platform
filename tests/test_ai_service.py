@@ -16,6 +16,7 @@ class AIServiceTests(unittest.IsolatedAsyncioTestCase):
         self.settings = Settings(
             openai_api_key="test-key",
             model_timeout_seconds=30.0,
+            database_url="postgresql+asyncpg://user:password@localhost/test",
         )
         self.client_patch = patch(
             "app.services.ai_service._get_client",

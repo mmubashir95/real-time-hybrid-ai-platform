@@ -1,4 +1,6 @@
 fastapi
 openai
 pydantic
+SQLAlchemy[asyncio]
+asyncpg
 uvicorn
