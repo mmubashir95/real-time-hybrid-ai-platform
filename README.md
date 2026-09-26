@@ -117,6 +117,44 @@ billing for) the request.
 **Browser clients:** native `EventSource` only supports GET requests, so it cannot
 call this POST endpoint. Use `fetch()` and read `response.body` as a stream instead.
 
+## Performance measurement
+
+The service writes correlated performance log lines using a request ID and
+monotonic `perf_counter()` timings. All durations are milliseconds:
+
+- `model_latency_ms`: only the awaited OpenAI provider request. Response parsing
+  and database work are excluded. Failed and cancelled attempts are also logged.
+- `database_latency_ms`: the complete primary save transaction, including add,
+  flush, refresh, and commit. A failed transaction includes its rollback attempt.
+- `end_to_end_latency_ms`: `/analyze` processing after FastAPI validation and
+  dependency setup through the point where the response is ready. It includes AI
+  processing and persistence, but not client/network round-trip time.
+
+Run the focused benchmark against a configured, running service:
+
+```bash
+pip install -r requirements-dev.txt
+python -m scripts.benchmark \
+  --url http://127.0.0.1:8000 \
+  --requests 100 \
+  --concurrency 5
+```
+
+`--message` and `--timeout` are also configurable. The benchmark targets only the
+normal `/analyze` endpoint so its completion latency is not mixed with SSE timing
+semantics. It reports client-observed latency percentiles for successful requests,
+using linear interpolation between closest ranks. p50 is the median; p95 and p99
+describe the slower tail of the tested sample.
+
+RPS is all completed requests divided by total benchmark elapsed time. Error rate
+is transport errors or any non-2xx HTTP response divided by requested calls; with
+the valid default payload, a 4xx response is therefore a benchmark failure.
+
+The report records the target, request count, concurrency, model, PostgreSQL, run
+time, and local machine description. Results characterize only that tested
+environment and workload; a small local run is not a production capacity claim.
+Exact server-side model/database timings remain in the correlated service logs.
+
 ## Async behavior
 
 Both `/analyze` and `/async-demo` are asynchronous because they wait for I/O-like

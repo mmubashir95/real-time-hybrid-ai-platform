@@ -1,6 +1,6 @@
 import unittest
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,12 +39,19 @@ class AnalysisRepositoryTests(unittest.IsolatedAsyncioTestCase):
 
         self.session.refresh.side_effect = populate_database_values
 
-        record = await save_analysis(
-            self.session,
-            "I was charged twice.",
-            self.analysis,
-            125,
-        )
+        with patch(
+            "app.repositories.analysis_repository.perf_counter",
+            side_effect=(20.0, 20.03),
+        ), self.assertLogs(
+            "app.repositories.analysis_repository", "INFO"
+        ) as logs:
+            record = await save_analysis(
+                self.session,
+                "I was charged twice.",
+                self.analysis,
+                125,
+                request_id="request-123",
+            )
 
         self.session.add.assert_called_once_with(record)
         self.session.flush.assert_awaited_once_with()
@@ -60,6 +67,9 @@ class AnalysisRepositoryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(record.sentiment, self.analysis.sentiment)
         self.assertEqual(record.created_at, created_at)
         self.assertEqual(record.latency_ms, 125)
+        self.assertIn("request_id=request-123", logs.output[0])
+        self.assertIn("database_latency_ms=30.000", logs.output[0])
+        self.assertIn("status=success", logs.output[0])
 
     async def test_save_failure_rolls_back_and_is_controlled(self) -> None:
         self.session.commit.side_effect = SQLAlchemyError("connection secret")

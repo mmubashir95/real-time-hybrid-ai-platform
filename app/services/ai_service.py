@@ -1,6 +1,8 @@
+import asyncio
 import json
 import logging
 from functools import lru_cache
+from time import perf_counter
 
 import openai
 from openai import AsyncOpenAI
@@ -61,13 +63,19 @@ def _get_client() -> tuple[AsyncOpenAI, Settings]:
     return client, settings
 
 
-async def analyze_message(message: str) -> AnalysisResult:
+async def analyze_message(
+    message: str,
+    *,
+    request_id: str = "-",
+) -> AnalysisResult:
     try:
         client, settings = _get_client()
     except ConfigurationError as error:
         logger.error("AI service configuration is invalid: %s", error)
         raise AIServiceError("AI service is not configured.") from error
 
+    model_started_at = perf_counter()
+    model_status = "error"
     try:
         # Awaiting the async client releases the event loop while the HTTP
         # request is in flight, so other requests can progress meanwhile.
@@ -84,6 +92,10 @@ async def analyze_message(message: str) -> AnalysisResult:
                 }
             },
         )
+        model_status = "success"
+    except asyncio.CancelledError:
+        model_status = "cancelled"
+        raise
     except openai.APITimeoutError as error:
         logger.warning(
             "AI provider request timed out provider=openai timeout_seconds=%s",
@@ -96,6 +108,15 @@ async def analyze_message(message: str) -> AnalysisResult:
             type(error).__name__,
         )
         raise AIServiceError("AI provider request failed.") from error
+    finally:
+        logger.info(
+            "performance request_id=%s operation=model_call model=%s "
+            "model_latency_ms=%.3f status=%s",
+            request_id,
+            MODEL,
+            (perf_counter() - model_started_at) * 1000,
+            model_status,
+        )
 
     try:
         analysis = json.loads(response.output_text)

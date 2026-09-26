@@ -78,12 +78,18 @@ class StreamingRouteTests(unittest.TestCase):
         self.assertEqual(
             events[3][1], {"status": "completed", "analysis_id": 42}
         )
-        analyze_message.assert_awaited_once_with("I was charged twice.")
+        analyze_message.assert_awaited_once()
+        self.assertEqual(
+            analyze_message.await_args.args, ("I was charged twice.",)
+        )
+        request_id = analyze_message.await_args.kwargs["request_id"]
+        self.assertTrue(request_id)
         save_analysis.assert_awaited_once()
         self.assertIs(save_analysis.await_args.args[0], self.session)
         self.assertEqual(save_analysis.await_args.args[1], "I was charged twice.")
         self.assertEqual(save_analysis.await_args.args[2], self.analysis)
         self.assertGreaterEqual(save_analysis.await_args.args[3], 0)
+        self.assertEqual(save_analysis.await_args.kwargs["request_id"], request_id)
 
     def test_invalid_request_uses_normal_validation(self) -> None:
         with patch(
@@ -183,7 +189,7 @@ class StreamingRouteTests(unittest.TestCase):
         app.dependency_overrides[get_session] = tracked_session
         closed_when_saving = []
 
-        async def save(*_args: object) -> SimpleNamespace:
+        async def save(*_args: object, **_kwargs: object) -> SimpleNamespace:
             closed_when_saving.append(session_closed)
             return SimpleNamespace(id=7)
 
@@ -239,7 +245,9 @@ class StreamingCancellationTests(unittest.IsolatedAsyncioTestCase):
         session = Mock(spec=AsyncSession)
         provider_started = asyncio.Event()
 
-        async def waiting_model_call(_message: str) -> AnalysisResult:
+        async def waiting_model_call(
+            _message: str, **_kwargs: object
+        ) -> AnalysisResult:
             provider_started.set()
             await asyncio.Event().wait()
             raise AssertionError("unreachable")
@@ -282,7 +290,9 @@ class StreamingConcurrencyTests(unittest.IsolatedAsyncioTestCase):
         release_models = asyncio.Event()
         started = 0
 
-        async def analyze(message: str) -> AnalysisResult:
+        async def analyze(
+            message: str, **_kwargs: object
+        ) -> AnalysisResult:
             nonlocal started
             started += 1
             if started == 2:
@@ -301,6 +311,7 @@ class StreamingConcurrencyTests(unittest.IsolatedAsyncioTestCase):
             message: str,
             _analysis: AnalysisResult,
             _latency_ms: int,
+            **_kwargs: object,
         ) -> SimpleNamespace:
             return SimpleNamespace(id={"message-a": 1, "message-b": 2}[message])
 

@@ -1,4 +1,6 @@
+import asyncio
 import logging
+from time import perf_counter
 
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -30,6 +32,8 @@ async def save_analysis(
     message: str,
     analysis: AnalysisResult,
     latency_ms: int,
+    *,
+    request_id: str = "-",
 ) -> AnalysisRecord:
     record = AnalysisRecord(
         message=message,
@@ -40,11 +44,17 @@ async def save_analysis(
         sentiment=analysis.sentiment,
         latency_ms=latency_ms,
     )
+    database_started_at = perf_counter()
+    database_status = "error"
     try:
         session.add(record)
         await session.flush()
         await session.refresh(record)
         await session.commit()
+        database_status = "success"
+    except asyncio.CancelledError:
+        database_status = "cancelled"
+        raise
     except DATABASE_ERRORS as error:
         try:
             await session.rollback()
@@ -55,6 +65,14 @@ async def save_analysis(
             )
         logger.error("Failed to save analysis error_type=%s", _error_type(error))
         raise DatabaseError("Failed to save analysis.") from error
+    finally:
+        logger.info(
+            "performance request_id=%s operation=database_save "
+            "database_latency_ms=%.3f status=%s",
+            request_id,
+            (perf_counter() - database_started_at) * 1000,
+            database_status,
+        )
 
     return record
 

@@ -61,10 +61,19 @@ class AIServiceTests(unittest.IsolatedAsyncioTestCase):
             )
         )
 
-        result = await analyze_message("I was charged $10 twice.")
+        with patch(
+            "app.services.ai_service.perf_counter",
+            side_effect=(10.0, 10.25),
+        ), self.assertLogs("app.services.ai_service", "INFO") as logs:
+            result = await analyze_message(
+                "I was charged $10 twice.", request_id="request-123"
+            )
 
         self.assertIsInstance(result, AnalysisResult)
         self.assertEqual(result.entities, {"amount": "$10"})
+        self.assertIn("request_id=request-123", logs.output[0])
+        self.assertIn("model_latency_ms=250.000", logs.output[0])
+        self.assertIn("status=success", logs.output[0])
 
     async def test_missing_configuration_is_controlled(self) -> None:
         with patch(

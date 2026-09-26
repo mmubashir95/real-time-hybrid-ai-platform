@@ -74,7 +74,10 @@ class AnalyzeRouteTests(unittest.TestCase):
             "app.main.save_analysis",
             new_callable=AsyncMock,
             return_value=SimpleNamespace(id=42),
-        ) as save_analysis:
+        ) as save_analysis, patch(
+            "app.main.perf_counter",
+            side_effect=(10.0, 10.1, 10.35, 10.6),
+        ), self.assertLogs("app.main", "INFO") as logs:
             response = self.client.post(
                 "/analyze", json={"message": "I was charged twice."}
             )
@@ -83,7 +86,12 @@ class AnalyzeRouteTests(unittest.TestCase):
         self.assertEqual(response.json(), expected)
         self.assertEqual(response.headers["X-Analysis-ID"], "42")
         self.assertEqual(response.headers["Location"], "/analyses/42")
-        analyze_message.assert_awaited_once_with("I was charged twice.")
+        analyze_message.assert_awaited_once()
+        self.assertEqual(
+            analyze_message.await_args.args, ("I was charged twice.",)
+        )
+        request_id = analyze_message.await_args.kwargs["request_id"]
+        self.assertTrue(request_id)
         save_analysis.assert_awaited_once()
         saved_session, saved_message, saved_analysis, latency_ms = (
             save_analysis.await_args.args
@@ -91,7 +99,13 @@ class AnalyzeRouteTests(unittest.TestCase):
         self.assertIs(saved_session, self.session)
         self.assertEqual(saved_message, "I was charged twice.")
         self.assertEqual(saved_analysis.model_dump(), expected)
-        self.assertGreaterEqual(latency_ms, 0)
+        self.assertEqual(latency_ms, 250)
+        self.assertEqual(save_analysis.await_args.kwargs["request_id"], request_id)
+        performance_log = next(
+            log for log in logs.output if "operation=analyze_request" in log
+        )
+        self.assertIn("end_to_end_latency_ms=600.000", performance_log)
+        self.assertIn("status=success", performance_log)
 
     def test_database_failure_returns_safe_503(self) -> None:
         analysis = AnalysisResult(

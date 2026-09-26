@@ -3,6 +3,7 @@ import json
 import logging
 from collections.abc import AsyncIterator
 from time import perf_counter
+from uuid import uuid4
 
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,12 +35,13 @@ async def stream_analysis(
     StreamingResponse cancels this generator at whatever it is awaiting (for
     example the model call), and CancelledError propagates so cleanup runs.
     """
+    request_id = uuid4().hex
     try:
         yield format_sse("processing_started", {"status": "processing"})
 
         started_at = perf_counter()
         try:
-            analysis = await analyze_message(message)
+            analysis = await analyze_message(message, request_id=request_id)
         except AIServiceError as error:
             logger.warning(
                 "Streaming AI analysis failed error_type=%s", type(error).__name__
@@ -59,7 +61,13 @@ async def stream_analysis(
 
         latency_ms = max(0, round((perf_counter() - started_at) * 1000))
         try:
-            record = await save_analysis(session, message, analysis, latency_ms)
+            record = await save_analysis(
+                session,
+                message,
+                analysis,
+                latency_ms,
+                request_id=request_id,
+            )
         except DatabaseError as error:
             logger.error(
                 "Streaming analysis persistence failed error_type=%s",

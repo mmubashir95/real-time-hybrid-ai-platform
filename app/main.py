@@ -80,25 +80,47 @@ async def analyze(
     response: Response,
     session: AsyncSession = Depends(get_session),
 ) -> AnalysisResult:
-    started_at = perf_counter()
+    request_id = uuid4().hex
+    request_started_at = perf_counter()
+    request_status = "error"
     try:
-        analysis = await analyze_message(analysis_request.message)
-    except AIServiceError as error:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="AI analysis is temporarily unavailable.",
-        ) from error
+        analysis_started_at = perf_counter()
+        try:
+            analysis = await analyze_message(
+                analysis_request.message,
+                request_id=request_id,
+            )
+        except AIServiceError as error:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="AI analysis is temporarily unavailable.",
+            ) from error
 
-    latency_ms = max(0, round((perf_counter() - started_at) * 1000))
-    record = await save_analysis(
-        session,
-        analysis_request.message,
-        analysis,
-        latency_ms,
-    )
-    response.headers["X-Analysis-ID"] = str(record.id)
-    response.headers["Location"] = f"/analyses/{record.id}"
-    return analysis
+        analysis_latency_ms = max(
+            0, round((perf_counter() - analysis_started_at) * 1000)
+        )
+        record = await save_analysis(
+            session,
+            analysis_request.message,
+            analysis,
+            analysis_latency_ms,
+            request_id=request_id,
+        )
+        response.headers["X-Analysis-ID"] = str(record.id)
+        response.headers["Location"] = f"/analyses/{record.id}"
+        request_status = "success"
+        return analysis
+    except asyncio.CancelledError:
+        request_status = "cancelled"
+        raise
+    finally:
+        logger.info(
+            "performance request_id=%s operation=analyze_request "
+            "end_to_end_latency_ms=%.3f status=%s",
+            request_id,
+            (perf_counter() - request_started_at) * 1000,
+            request_status,
+        )
 
 
 @app.post(
