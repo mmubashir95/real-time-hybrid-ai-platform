@@ -132,11 +132,16 @@ class AsyncDemoTests(unittest.IsolatedAsyncioTestCase):
             await operation
 
     def test_real_async_paths_do_not_call_time_sleep(self) -> None:
+        """Guard against the `time.sleep(...)` spelling only.
+
+        This does not prove the paths are non-blocking; the overlap test and
+        the AsyncMock-based service tests carry that.
+        """
         source_files = (
             Path(inspect.getsourcefile(main_module)),
             Path(inspect.getsourcefile(ai_service_module)),
         )
-        for source_file in set(source_files):
+        for source_file in source_files:
             tree = ast.parse(source_file.read_text())
             blocking_calls = [
                 node

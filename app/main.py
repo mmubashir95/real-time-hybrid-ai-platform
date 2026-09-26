@@ -8,10 +8,14 @@ from fastapi import FastAPI, HTTPException, status
 from app.schemas import AnalysisRequest, AnalysisResult
 from app.services.ai_service import AIServiceError, analyze_message
 
+# Uvicorn only configures its own loggers; without this, app INFO logs (such as
+# the /async-demo start/finish lines) are dropped.
+logging.basicConfig(level=logging.INFO)
+
 app = FastAPI()
 logger = logging.getLogger(__name__)
 
-ASYNC_DEMO_DELAY_SECONDS = 0.25
+ASYNC_DEMO_DELAY_SECONDS = 3.0
 
 
 async def fake_async_model_call() -> str:

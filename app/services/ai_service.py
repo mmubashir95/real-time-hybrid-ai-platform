@@ -69,6 +69,8 @@ async def analyze_message(message: str) -> AnalysisResult:
         raise AIServiceError("AI service is not configured.") from error
 
     try:
+        # Awaiting the async client releases the event loop while the HTTP
+        # request is in flight, so other requests can progress meanwhile.
         response = await client.responses.create(
             model=MODEL,
             instructions=ANALYSIS_INSTRUCTIONS,
