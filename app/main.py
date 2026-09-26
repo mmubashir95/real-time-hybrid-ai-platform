@@ -81,6 +81,9 @@ async def analyze(
     session: AsyncSession = Depends(get_session),
 ) -> AnalysisResult:
     request_id = uuid4().hex
+    # Returned to the caller so a slow response can be matched to its
+    # model/database performance log lines.
+    response.headers["X-Request-ID"] = request_id
     request_started_at = perf_counter()
     request_status = "error"
     try:
@@ -94,6 +97,7 @@ async def analyze(
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="AI analysis is temporarily unavailable.",
+                headers={"X-Request-ID": request_id},
             ) from error
 
         analysis_latency_ms = max(

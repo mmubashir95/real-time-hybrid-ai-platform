@@ -57,6 +57,7 @@ class AnalyzeRouteTests(unittest.TestCase):
             {"detail": "AI analysis is temporarily unavailable."},
         )
         self.assertNotIn("sensitive", response.text)
+        self.assertTrue(response.headers["X-Request-ID"])
 
     def test_analyze_awaits_service_and_preserves_response(self) -> None:
         expected = {
@@ -86,6 +87,10 @@ class AnalyzeRouteTests(unittest.TestCase):
         self.assertEqual(response.json(), expected)
         self.assertEqual(response.headers["X-Analysis-ID"], "42")
         self.assertEqual(response.headers["Location"], "/analyses/42")
+        self.assertEqual(
+            response.headers["X-Request-ID"],
+            analyze_message.await_args.kwargs["request_id"],
+        )
         analyze_message.assert_awaited_once()
         self.assertEqual(
             analyze_message.await_args.args, ("I was charged twice.",)

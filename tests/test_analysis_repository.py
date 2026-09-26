@@ -74,10 +74,18 @@ class AnalysisRepositoryTests(unittest.IsolatedAsyncioTestCase):
     async def test_save_failure_rolls_back_and_is_controlled(self) -> None:
         self.session.commit.side_effect = SQLAlchemyError("connection secret")
 
-        with self.assertRaisesRegex(DatabaseError, "Failed to save"):
-            await save_analysis(self.session, "Hello", self.analysis, 1)
+        with self.assertLogs("app.repositories.analysis_repository", "INFO") as logs:
+            with self.assertRaisesRegex(DatabaseError, "Failed to save"):
+                await save_analysis(
+                    self.session, "Hello", self.analysis, 1, request_id="request-123"
+                )
 
         self.session.rollback.assert_awaited_once_with()
+        performance_log = next(
+            log for log in logs.output if "operation=database_save" in log
+        )
+        self.assertIn("request_id=request-123", performance_log)
+        self.assertIn("status=error", performance_log)
 
     async def test_unreachable_database_on_save_is_controlled(self) -> None:
         # asyncpg raises a bare OSError (not a SQLAlchemyError) on connection refused.

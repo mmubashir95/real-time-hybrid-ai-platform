@@ -24,11 +24,11 @@ class RequestMeasurement:
 @dataclass(frozen=True)
 class BenchmarkSummary:
     total_requests: int
-    completed_requests: int
     successful_requests: int
     failed_requests: int
     duration_seconds: float
     requests_per_second: float
+    successful_requests_per_second: float
     error_rate_percent: float
     p50_ms: float | None
     p95_ms: float | None
@@ -90,11 +90,15 @@ def summarize(
 
     return BenchmarkSummary(
         total_requests=len(measurements),
-        completed_requests=len(measurements),
         successful_requests=len(successful_latencies),
         failed_requests=failed_requests,
         duration_seconds=duration_seconds,
         requests_per_second=calculate_rps(len(measurements), duration_seconds),
+        # Fast failures (e.g. immediate 503s) inflate total RPS, so successful
+        # throughput is reported separately.
+        successful_requests_per_second=calculate_rps(
+            len(successful_latencies), duration_seconds
+        ),
         error_rate_percent=calculate_error_rate(
             len(measurements), failed_requests
         ),
@@ -127,6 +131,8 @@ async def run_benchmark(
     concurrency: int,
     message: str,
     timeout_seconds: float,
+    warmup_requests: int = 0,
+    transport: httpx.AsyncBaseTransport | None = None,
 ) -> BenchmarkSummary:
     if request_count <= 0:
         raise ValueError("Request count must be positive.")
@@ -134,10 +140,28 @@ async def run_benchmark(
         raise ValueError("Concurrency must be positive.")
     if timeout_seconds <= 0:
         raise ValueError("Timeout must be positive.")
+    if warmup_requests < 0:
+        raise ValueError("Warm-up requests cannot be negative.")
 
     endpoint = f"{base_url.rstrip('/')}/analyze"
     semaphore = asyncio.Semaphore(concurrency)
-    async with httpx.AsyncClient(timeout=timeout_seconds) as client:
+    async with httpx.AsyncClient(
+        timeout=timeout_seconds,
+        # httpx allows 100 connections by default; above that, requests would
+        # queue for a connection inside the timed section and inflate latency.
+        limits=httpx.Limits(max_connections=concurrency),
+        transport=transport,
+    ) as client:
+        # Warm-up requests pay one-time costs (provider client creation, new
+        # database pool connections, TLS handshakes). Measuring them would put
+        # startup cost into p95/p99, so their results are discarded.
+        await asyncio.gather(
+            *(
+                measure_request(client, semaphore, endpoint, message)
+                for _ in range(warmup_requests)
+            )
+        )
+
         started_at = perf_counter()
         measurements = await asyncio.gather(
             *(
@@ -157,6 +181,7 @@ def print_report(
     summary: BenchmarkSummary,
     base_url: str,
     concurrency: int,
+    warmup_requests: int,
 ) -> None:
     print("Performance Benchmark")
     print("Environment:")
@@ -165,34 +190,48 @@ def print_report(
     print(f"  Endpoint: {base_url.rstrip('/')}/analyze")
     print(f"  Model: {MODEL}")
     print("  Database: PostgreSQL")
-    print(f"  Requests: {summary.total_requests}")
+    print(f"  Measured requests: {summary.total_requests}")
+    print(f"  Warm-up requests (excluded): {warmup_requests}")
     print(f"  Concurrency: {concurrency}")
     print("End-to-end client-observed latency (successful requests):")
     print(f"  p50: {_format_latency(summary.p50_ms)}")
     print(f"  p95: {_format_latency(summary.p95_ms)}")
     print(f"  p99: {_format_latency(summary.p99_ms)}")
     print("Throughput:")
-    print(f"  Completed: {summary.completed_requests}")
     print(f"  Successful: {summary.successful_requests}")
     print(f"  Failed: {summary.failed_requests}")
     print(f"  Duration: {summary.duration_seconds:.2f} s")
-    print(f"  Requests/sec: {summary.requests_per_second:.2f}")
+    print(f"  Requests/sec (all): {summary.requests_per_second:.2f}")
+    print(
+        f"  Requests/sec (successful): {summary.successful_requests_per_second:.2f}"
+    )
     print("Errors:")
     print(
         f"  {summary.failed_requests} / {summary.total_requests} "
         f"({summary.error_rate_percent:.2f}%)"
     )
+    if summary.successful_requests < 100:
+        print(
+            "Note: fewer than 100 successful samples; p95/p99 are close to the "
+            "slowest measured requests and are weak evidence."
+        )
     print(
         "Server logs contain correlated model_latency_ms, database_latency_ms, "
-        "and end_to_end_latency_ms values."
+        "and end_to_end_latency_ms values (see the X-Request-ID response header)."
     )
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", default="http://127.0.0.1:8000")
-    parser.add_argument("--requests", type=int, default=20)
+    parser.add_argument("--requests", type=int, default=100)
     parser.add_argument("--concurrency", type=int, default=2)
+    parser.add_argument(
+        "--warmup",
+        type=int,
+        default=None,
+        help="Requests sent first and excluded from results (default: concurrency).",
+    )
     parser.add_argument("--message", default=DEFAULT_MESSAGE)
     parser.add_argument("--timeout", type=float, default=60.0)
     arguments = parser.parse_args()
@@ -202,6 +241,10 @@ def parse_args() -> argparse.Namespace:
         parser.error("--concurrency must be positive")
     if arguments.timeout <= 0:
         parser.error("--timeout must be positive")
+    if arguments.warmup is None:
+        arguments.warmup = arguments.concurrency
+    if arguments.warmup < 0:
+        parser.error("--warmup cannot be negative")
     return arguments
 
 
@@ -214,9 +257,10 @@ def main() -> None:
             arguments.concurrency,
             arguments.message,
             arguments.timeout,
+            warmup_requests=arguments.warmup,
         )
     )
-    print_report(summary, arguments.url, arguments.concurrency)
+    print_report(summary, arguments.url, arguments.concurrency, arguments.warmup)
 
 
 if __name__ == "__main__":

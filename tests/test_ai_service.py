@@ -88,8 +88,15 @@ class AIServiceTests(unittest.IsolatedAsyncioTestCase):
             side_effect=openai.APITimeoutError(request=Mock())
         )
 
-        with self.assertRaisesRegex(AIServiceError, "timed out"):
-            await analyze_message("Hello")
+        with self.assertLogs("app.services.ai_service", "INFO") as logs:
+            with self.assertRaisesRegex(AIServiceError, "timed out"):
+                await analyze_message("Hello", request_id="request-123")
+
+        performance_log = next(
+            log for log in logs.output if "operation=model_call" in log
+        )
+        self.assertIn("request_id=request-123", performance_log)
+        self.assertIn("status=error", performance_log)
 
     async def test_provider_failure_is_controlled(self) -> None:
         self.client.responses.create = AsyncMock(

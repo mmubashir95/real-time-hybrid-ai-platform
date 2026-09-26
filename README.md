@@ -130,30 +130,56 @@ monotonic `perf_counter()` timings. All durations are milliseconds:
   dependency setup through the point where the response is ready. It includes AI
   processing and persistence, but not client/network round-trip time.
 
+Each `/analyze` response carries an `X-Request-ID` header matching the
+`request_id` in these log lines, so a slow response can be traced to its model and
+database timings.
+
+The first requests after startup include one-time costs: building the OpenAI
+client (roughly 90 ms locally, counted in end-to-end but not model latency), opening
+new database pool connections (counted in database latency), and the first TLS
+handshake to the provider (counted in model latency). Don't read a single cold
+request's timings as steady-state overhead.
+
 Run the focused benchmark against a configured, running service:
 
 ```bash
 pip install -r requirements-dev.txt
 python -m scripts.benchmark \
   --url http://127.0.0.1:8000 \
-  --requests 100 \
+  --requests 200 \
   --concurrency 5
 ```
 
-`--message` and `--timeout` are also configurable. The benchmark targets only the
-normal `/analyze` endpoint so its completion latency is not mixed with SSE timing
-semantics. It reports client-observed latency percentiles for successful requests,
-using linear interpolation between closest ranks. p50 is the median; p95 and p99
-describe the slower tail of the tested sample.
+`--warmup` (default: the concurrency value), `--message`, and `--timeout` are also
+configurable. Warm-up requests are sent first and excluded from every result, so
+the one-time startup costs above do not land in p95/p99. The benchmark targets only
+the normal `/analyze` endpoint so its completion latency is not mixed with SSE timing
+semantics.
 
-RPS is all completed requests divided by total benchmark elapsed time. Error rate
-is transport errors or any non-2xx HTTP response divided by requested calls; with
-the valid default payload, a 4xx response is therefore a benchmark failure.
+Latency percentiles are client-observed and cover successful requests only. They
+use linear interpolation between closest ranks (the same method as NumPy's default
+and Python's `statistics.quantiles(method="inclusive")`):
 
-The report records the target, request count, concurrency, model, PostgreSQL, run
+- p50: the median; half of the measured requests were at or below this value.
+- p95: 95% of measured requests were at or below this value.
+- p99: 99% of measured requests were at or below this value. It is not the single
+  slowest request.
+
+Sample size matters. p95 needs at least about 100 successful requests, and p99
+needs several hundred to over a thousand before it is more than a near-maximum.
+With 20 requests, p99 is effectively the slowest request. The report prints a
+warning when fewer than 100 requests succeed.
+
+RPS (all) is every measured request divided by total benchmark elapsed time; RPS
+(successful) counts only 2xx responses, because fast failures such as immediate 503s
+would inflate the total. Error rate is transport errors (including timeouts) or any
+non-2xx HTTP response divided by measured requests; with the valid default payload,
+a 4xx response is therefore a benchmark failure.
+
+The report records the target, request counts, concurrency, model, database, run
 time, and local machine description. Results characterize only that tested
-environment and workload; a small local run is not a production capacity claim.
-Exact server-side model/database timings remain in the correlated service logs.
+environment, workload, and time window; provider latency varies externally, and a
+local run is not a production capacity claim.
 
 ## Async behavior
 
