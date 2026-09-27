@@ -37,6 +37,11 @@ ASYNC_DEMO_DELAY_SECONDS = 3.0
 POSTGRES_INTEGER_MAX = 2_147_483_647
 
 
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
 @app.exception_handler(DatabaseError)
 async def database_error_handler(
     _request: Request, error: DatabaseError

@@ -19,6 +19,14 @@ from app.schemas import AnalysisResult
 from app.services.ai_service import AIServiceError
 
 
+class HealthRouteTests(unittest.TestCase):
+    def test_health_returns_ok(self) -> None:
+        response = TestClient(app).get("/health")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+
+
 class AnalyzeRouteTests(unittest.TestCase):
     def setUp(self) -> None:
         self.session = Mock(spec=AsyncSession)
