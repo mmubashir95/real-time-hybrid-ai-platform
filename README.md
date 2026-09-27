@@ -40,6 +40,10 @@ Compose overrides `DATABASE_URL` with an internal async URL whose hostname is
 `postgres`. The committed PostgreSQL username/password are development-only values
 used solely inside this local Compose network; do not reuse them in production.
 
+Stop any locally running `uvicorn` first. Compose publishes port 8000, and on some
+hosts (notably macOS) a local server on `127.0.0.1:8000` keeps answering requests
+there instead of the container.
+
 Start the complete stack:
 
 ```bash
@@ -55,7 +59,7 @@ automatically. It does not reapply initialization files to an existing volume.
 Verify the API and its existing behavior:
 
 ```bash
-curl http://127.0.0.1:8000/openapi.json
+curl http://127.0.0.1:8000/health
 
 curl -i -X POST http://127.0.0.1:8000/analyze \
   -H "Content-Type: application/json" \
@@ -67,7 +71,7 @@ curl -N -X POST http://127.0.0.1:8000/analyze/stream \
   -d '{"message":"I was charged twice for my subscription."}'
 ```
 
-The API container healthcheck uses `/openapi.json`; it verifies that FastAPI is
+The API container healthcheck uses `/health`; it verifies that FastAPI is
 serving HTTP, not that the external model provider is available. Phase 9 performance
 logs remain visible through `docker compose logs api`.
 

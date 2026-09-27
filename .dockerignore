@@ -5,14 +5,14 @@
 !.env.example
 .venv
 venv
-__pycache__
-*.py[cod]
+**/__pycache__
+**/*.py[cod]
 .pytest_cache
 .mypy_cache
 .ruff_cache
 .coverage
 htmlcov
-.DS_Store
+**/.DS_Store
 .idea
 .vscode
 *.log
