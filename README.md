@@ -24,6 +24,79 @@ automatically. If your PostgreSQL role needs a password, use
 `postgresql+asyncpg://user:password@localhost:5432/realtime_ai`. Never commit real
 values; `.env.example` holds placeholders only.
 
+## Docker
+
+Prerequisites are Docker Engine or Docker Desktop and a valid OpenAI API key. The
+Compose stack contains only the FastAPI service and PostgreSQL; Redis is omitted
+because the application does not use it.
+
+Create local runtime configuration and set `OPENAI_API_KEY` in the new `.env` file:
+
+```bash
+cp .env.example .env
+```
+
+Compose overrides `DATABASE_URL` with an internal async URL whose hostname is
+`postgres`. The committed PostgreSQL username/password are development-only values
+used solely inside this local Compose network; do not reuse them in production.
+
+Start the complete stack:
+
+```bash
+docker compose up --build -d
+docker compose ps
+docker compose logs -f api
+```
+
+PostgreSQL must pass `pg_isready` before the API starts. On the first creation of
+the named volume, the official PostgreSQL entrypoint applies `schema.sql`
+automatically. It does not reapply initialization files to an existing volume.
+
+Verify the API and its existing behavior:
+
+```bash
+curl http://127.0.0.1:8000/openapi.json
+
+curl -i -X POST http://127.0.0.1:8000/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"message":"I was charged twice for my subscription."}'
+
+curl -N -X POST http://127.0.0.1:8000/analyze/stream \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -d '{"message":"I was charged twice for my subscription."}'
+```
+
+The API container healthcheck uses `/openapi.json`; it verifies that FastAPI is
+serving HTTP, not that the external model provider is available. Phase 9 performance
+logs remain visible through `docker compose logs api`.
+
+Stop containers without deleting stored analyses:
+
+```bash
+docker compose down
+```
+
+Starting again with `docker compose up -d` reuses the named PostgreSQL volume. Use
+`GET /analyses/{id}` to confirm a previously stored record remains available. To
+delete all local PostgreSQL data and rerun `schema.sql` on the next start:
+
+```bash
+docker compose down -v
+```
+
+The `-v` option permanently removes the Compose database volume.
+
+The API image can also be built independently:
+
+```bash
+docker build -t realtime-ai-service .
+```
+
+Running that image alone still requires `OPENAI_API_KEY`, `MODEL_TIMEOUT_SECONDS`,
+and a `DATABASE_URL` reachable from inside the container. Compose is the supported
+complete local workflow because it supplies PostgreSQL and initializes its schema.
+
 ## PostgreSQL persistence
 
 Phase 7 uses SQLAlchemy's async session support with the `asyncpg` driver. Database
