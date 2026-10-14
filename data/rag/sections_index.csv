@@ -1,0 +1,656 @@
+document_id,tenant_id,version,section_key,title,characters,word_count,source_path
+AST-REF-001,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1043,147,documents/asterdesk/AST-REF-001_v2-0.pdf
+AST-REF-001,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1460,197,documents/asterdesk/AST-REF-001_v2-0.pdf
+AST-REF-001,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1133,154,documents/asterdesk/AST-REF-001_v2-0.pdf
+AST-REF-001,asterdesk,2.0,MATRIX,Operational decision matrix,1951,274,documents/asterdesk/AST-REF-001_v2-0.pdf
+AST-REF-001,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2480,346,documents/asterdesk/AST-REF-001_v2-0.pdf
+AST-REF-001,asterdesk,2.0,CASES,Worked customer and operational cases,5348,730,documents/asterdesk/AST-REF-001_v2-0.pdf
+AST-REF-001,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1577,210,documents/asterdesk/AST-REF-001_v2-0.pdf
+AST-REF-001,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1726,253,documents/asterdesk/AST-REF-001_v2-0.pdf
+AST-REF-001,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1355,197,documents/asterdesk/AST-REF-001_v2-0.pdf
+AST-REF-001,asterdesk,1.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1045,147,documents/asterdesk/AST-REF-001_v1-0.html
+AST-REF-001,asterdesk,1.0,HISTORY,Historical change note,450,64,documents/asterdesk/AST-REF-001_v1-0.html
+AST-REF-001,asterdesk,1.0,SCOPE,"Eligible population, channels and exclusions",1460,197,documents/asterdesk/AST-REF-001_v1-0.html
+AST-REF-001,asterdesk,1.0,DECISION,Controlling decision rules and evidence,1166,156,documents/asterdesk/AST-REF-001_v1-0.html
+AST-REF-001,asterdesk,1.0,MATRIX,Operational decision matrix,1951,274,documents/asterdesk/AST-REF-001_v1-0.html
+AST-REF-001,asterdesk,1.0,PROCEDURE,Support-to-resolution procedure,2513,348,documents/asterdesk/AST-REF-001_v1-0.html
+AST-REF-001,asterdesk,1.0,CASES,Worked customer and operational cases,5348,730,documents/asterdesk/AST-REF-001_v1-0.html
+AST-REF-001,asterdesk,1.0,EXCEPTIONS,Boundary conditions and non-happy paths,1577,210,documents/asterdesk/AST-REF-001_v1-0.html
+AST-REF-001,asterdesk,1.0,FAQ,Support questions and approved response boundaries,1726,253,documents/asterdesk/AST-REF-001_v1-0.html
+AST-REF-001,asterdesk,1.0,AUDIT,"Quality checks, redaction and lifecycle",1355,197,documents/asterdesk/AST-REF-001_v1-0.html
+AST-DUP-002,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1042,147,documents/asterdesk/AST-DUP-002_v2-0.html
+AST-DUP-002,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1475,204,documents/asterdesk/AST-DUP-002_v2-0.html
+AST-DUP-002,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1126,156,documents/asterdesk/AST-DUP-002_v2-0.html
+AST-DUP-002,asterdesk,2.0,MATRIX,Operational decision matrix,1966,281,documents/asterdesk/AST-DUP-002_v2-0.html
+AST-DUP-002,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2477,347,documents/asterdesk/AST-DUP-002_v2-0.html
+AST-DUP-002,asterdesk,2.0,CASES,Worked customer and operational cases,5214,699,documents/asterdesk/AST-DUP-002_v2-0.html
+AST-DUP-002,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1584,211,documents/asterdesk/AST-DUP-002_v2-0.html
+AST-DUP-002,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1729,250,documents/asterdesk/AST-DUP-002_v2-0.html
+AST-DUP-002,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1350,195,documents/asterdesk/AST-DUP-002_v2-0.html
+AST-CAN-003,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1032,145,documents/asterdesk/AST-CAN-003_v2-0.md
+AST-CAN-003,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1454,192,documents/asterdesk/AST-CAN-003_v2-0.md
+AST-CAN-003,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1122,147,documents/asterdesk/AST-CAN-003_v2-0.md
+AST-CAN-003,asterdesk,2.0,MATRIX,Operational decision matrix,1945,269,documents/asterdesk/AST-CAN-003_v2-0.md
+AST-CAN-003,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2458,338,documents/asterdesk/AST-CAN-003_v2-0.md
+AST-CAN-003,asterdesk,2.0,CASES,Worked customer and operational cases,5078,702,documents/asterdesk/AST-CAN-003_v2-0.md
+AST-CAN-003,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1565,209,documents/asterdesk/AST-CAN-003_v2-0.md
+AST-CAN-003,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1656,239,documents/asterdesk/AST-CAN-003_v2-0.md
+AST-CAN-003,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1344,194,documents/asterdesk/AST-CAN-003_v2-0.md
+AST-CAN-003,asterdesk,1.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1034,145,documents/asterdesk/AST-CAN-003_v1-0.txt
+AST-CAN-003,asterdesk,1.0,HISTORY,Historical change note,406,57,documents/asterdesk/AST-CAN-003_v1-0.txt
+AST-CAN-003,asterdesk,1.0,SCOPE,"Eligible population, channels and exclusions",1454,192,documents/asterdesk/AST-CAN-003_v1-0.txt
+AST-CAN-003,asterdesk,1.0,DECISION,Controlling decision rules and evidence,1144,151,documents/asterdesk/AST-CAN-003_v1-0.txt
+AST-CAN-003,asterdesk,1.0,MATRIX,Operational decision matrix,1945,269,documents/asterdesk/AST-CAN-003_v1-0.txt
+AST-CAN-003,asterdesk,1.0,PROCEDURE,Support-to-resolution procedure,2480,342,documents/asterdesk/AST-CAN-003_v1-0.txt
+AST-CAN-003,asterdesk,1.0,CASES,Worked customer and operational cases,5078,702,documents/asterdesk/AST-CAN-003_v1-0.txt
+AST-CAN-003,asterdesk,1.0,EXCEPTIONS,Boundary conditions and non-happy paths,1565,209,documents/asterdesk/AST-CAN-003_v1-0.txt
+AST-CAN-003,asterdesk,1.0,FAQ,Support questions and approved response boundaries,1656,239,documents/asterdesk/AST-CAN-003_v1-0.txt
+AST-CAN-003,asterdesk,1.0,AUDIT,"Quality checks, redaction and lifecycle",1344,194,documents/asterdesk/AST-CAN-003_v1-0.txt
+AST-FAIL-004,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1032,148,documents/asterdesk/AST-FAIL-004_v2-0.txt
+AST-FAIL-004,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1445,197,documents/asterdesk/AST-FAIL-004_v2-0.txt
+AST-FAIL-004,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1095,146,documents/asterdesk/AST-FAIL-004_v2-0.txt
+AST-FAIL-004,asterdesk,2.0,MATRIX,Operational decision matrix,1936,274,documents/asterdesk/AST-FAIL-004_v2-0.txt
+AST-FAIL-004,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2452,341,documents/asterdesk/AST-FAIL-004_v2-0.txt
+AST-FAIL-004,asterdesk,2.0,CASES,Worked customer and operational cases,5233,734,documents/asterdesk/AST-FAIL-004_v2-0.txt
+AST-FAIL-004,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1599,216,documents/asterdesk/AST-FAIL-004_v2-0.txt
+AST-FAIL-004,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1715,250,documents/asterdesk/AST-FAIL-004_v2-0.txt
+AST-FAIL-004,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1349,197,documents/asterdesk/AST-FAIL-004_v2-0.txt
+AST-INVOICE-005,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1039,146,documents/asterdesk/AST-INVOICE-005_v2-0.pdf
+AST-INVOICE-005,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1399,184,documents/asterdesk/AST-INVOICE-005_v2-0.pdf
+AST-INVOICE-005,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1033,137,documents/asterdesk/AST-INVOICE-005_v2-0.pdf
+AST-INVOICE-005,asterdesk,2.0,MATRIX,Operational decision matrix,1890,261,documents/asterdesk/AST-INVOICE-005_v2-0.pdf
+AST-INVOICE-005,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2376,331,documents/asterdesk/AST-INVOICE-005_v2-0.pdf
+AST-INVOICE-005,asterdesk,2.0,CASES,Worked customer and operational cases,5634,792,documents/asterdesk/AST-INVOICE-005_v2-0.pdf
+AST-INVOICE-005,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1581,213,documents/asterdesk/AST-INVOICE-005_v2-0.pdf
+AST-INVOICE-005,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1652,246,documents/asterdesk/AST-INVOICE-005_v2-0.pdf
+AST-INVOICE-005,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1320,194,documents/asterdesk/AST-INVOICE-005_v2-0.pdf
+AST-PRORATE-006,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1014,144,documents/asterdesk/AST-PRORATE-006_v2-0.md
+AST-PRORATE-006,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1377,190,documents/asterdesk/AST-PRORATE-006_v2-0.md
+AST-PRORATE-006,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1081,151,documents/asterdesk/AST-PRORATE-006_v2-0.md
+AST-PRORATE-006,asterdesk,2.0,MATRIX,Operational decision matrix,1868,267,documents/asterdesk/AST-PRORATE-006_v2-0.md
+AST-PRORATE-006,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2416,342,documents/asterdesk/AST-PRORATE-006_v2-0.md
+AST-PRORATE-006,asterdesk,2.0,CASES,Worked customer and operational cases,5369,744,documents/asterdesk/AST-PRORATE-006_v2-0.md
+AST-PRORATE-006,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1550,208,documents/asterdesk/AST-PRORATE-006_v2-0.md
+AST-PRORATE-006,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1688,254,documents/asterdesk/AST-PRORATE-006_v2-0.md
+AST-PRORATE-006,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1343,198,documents/asterdesk/AST-PRORATE-006_v2-0.md
+AST-TRIAL-007,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1025,144,documents/asterdesk/AST-TRIAL-007_v2-0.html
+AST-TRIAL-007,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1394,188,documents/asterdesk/AST-TRIAL-007_v2-0.html
+AST-TRIAL-007,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1067,144,documents/asterdesk/AST-TRIAL-007_v2-0.html
+AST-TRIAL-007,asterdesk,2.0,MATRIX,Operational decision matrix,1885,265,documents/asterdesk/AST-TRIAL-007_v2-0.html
+AST-TRIAL-007,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2410,336,documents/asterdesk/AST-TRIAL-007_v2-0.html
+AST-TRIAL-007,asterdesk,2.0,CASES,Worked customer and operational cases,5522,753,documents/asterdesk/AST-TRIAL-007_v2-0.html
+AST-TRIAL-007,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1569,209,documents/asterdesk/AST-TRIAL-007_v2-0.html
+AST-TRIAL-007,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1676,248,documents/asterdesk/AST-TRIAL-007_v2-0.html
+AST-TRIAL-007,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1334,193,documents/asterdesk/AST-TRIAL-007_v2-0.html
+AST-PLANS-008,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1030,147,documents/asterdesk/AST-PLANS-008_v2-0.pdf
+AST-PLANS-008,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1405,188,documents/asterdesk/AST-PLANS-008_v2-0.pdf
+AST-PLANS-008,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1065,142,documents/asterdesk/AST-PLANS-008_v2-0.pdf
+AST-PLANS-008,asterdesk,2.0,MATRIX,Operational decision matrix,1896,265,documents/asterdesk/AST-PLANS-008_v2-0.pdf
+AST-PLANS-008,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2421,337,documents/asterdesk/AST-PLANS-008_v2-0.pdf
+AST-PLANS-008,asterdesk,2.0,CASES,Worked customer and operational cases,5598,774,documents/asterdesk/AST-PLANS-008_v2-0.pdf
+AST-PLANS-008,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1579,211,documents/asterdesk/AST-PLANS-008_v2-0.pdf
+AST-PLANS-008,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1688,244,documents/asterdesk/AST-PLANS-008_v2-0.pdf
+AST-PLANS-008,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1326,193,documents/asterdesk/AST-PLANS-008_v2-0.pdf
+AST-PLANS-008,asterdesk,1.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1032,147,documents/asterdesk/AST-PLANS-008_v1-0.txt
+AST-PLANS-008,asterdesk,1.0,HISTORY,Historical change note,384,58,documents/asterdesk/AST-PLANS-008_v1-0.txt
+AST-PLANS-008,asterdesk,1.0,SCOPE,"Eligible population, channels and exclusions",1405,188,documents/asterdesk/AST-PLANS-008_v1-0.txt
+AST-PLANS-008,asterdesk,1.0,DECISION,Controlling decision rules and evidence,1042,143,documents/asterdesk/AST-PLANS-008_v1-0.txt
+AST-PLANS-008,asterdesk,1.0,MATRIX,Operational decision matrix,1896,265,documents/asterdesk/AST-PLANS-008_v1-0.txt
+AST-PLANS-008,asterdesk,1.0,PROCEDURE,Support-to-resolution procedure,2398,338,documents/asterdesk/AST-PLANS-008_v1-0.txt
+AST-PLANS-008,asterdesk,1.0,CASES,Worked customer and operational cases,5598,774,documents/asterdesk/AST-PLANS-008_v1-0.txt
+AST-PLANS-008,asterdesk,1.0,EXCEPTIONS,Boundary conditions and non-happy paths,1579,211,documents/asterdesk/AST-PLANS-008_v1-0.txt
+AST-PLANS-008,asterdesk,1.0,FAQ,Support questions and approved response boundaries,1688,244,documents/asterdesk/AST-PLANS-008_v1-0.txt
+AST-PLANS-008,asterdesk,1.0,AUDIT,"Quality checks, redaction and lifecycle",1326,193,documents/asterdesk/AST-PLANS-008_v1-0.txt
+AST-SEAT-009,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1036,148,documents/asterdesk/AST-SEAT-009_v2-0.txt
+AST-SEAT-009,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1387,190,documents/asterdesk/AST-SEAT-009_v2-0.txt
+AST-SEAT-009,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1038,141,documents/asterdesk/AST-SEAT-009_v2-0.txt
+AST-SEAT-009,asterdesk,2.0,MATRIX,Operational decision matrix,1878,267,documents/asterdesk/AST-SEAT-009_v2-0.txt
+AST-SEAT-009,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2406,335,documents/asterdesk/AST-SEAT-009_v2-0.txt
+AST-SEAT-009,asterdesk,2.0,CASES,Worked customer and operational cases,5778,792,documents/asterdesk/AST-SEAT-009_v2-0.txt
+AST-SEAT-009,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1600,213,documents/asterdesk/AST-SEAT-009_v2-0.txt
+AST-SEAT-009,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1712,248,documents/asterdesk/AST-SEAT-009_v2-0.txt
+AST-SEAT-009,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1344,195,documents/asterdesk/AST-SEAT-009_v2-0.txt
+AST-CARD-010,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1022,145,documents/asterdesk/AST-CARD-010_v2-0.md
+AST-CARD-010,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1372,188,documents/asterdesk/AST-CARD-010_v2-0.md
+AST-CARD-010,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1056,146,documents/asterdesk/AST-CARD-010_v2-0.md
+AST-CARD-010,asterdesk,2.0,MATRIX,Operational decision matrix,1863,265,documents/asterdesk/AST-CARD-010_v2-0.md
+AST-CARD-010,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2406,341,documents/asterdesk/AST-CARD-010_v2-0.md
+AST-CARD-010,asterdesk,2.0,CASES,Worked customer and operational cases,5427,772,documents/asterdesk/AST-CARD-010_v2-0.md
+AST-CARD-010,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1560,211,documents/asterdesk/AST-CARD-010_v2-0.md
+AST-CARD-010,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1681,251,documents/asterdesk/AST-CARD-010_v2-0.md
+AST-CARD-010,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1331,195,documents/asterdesk/AST-CARD-010_v2-0.md
+AST-COUPON-011,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1041,147,documents/asterdesk/AST-COUPON-011_v2-0.pdf
+AST-COUPON-011,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1426,192,documents/asterdesk/AST-COUPON-011_v2-0.pdf
+AST-COUPON-011,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1090,144,documents/asterdesk/AST-COUPON-011_v2-0.pdf
+AST-COUPON-011,asterdesk,2.0,MATRIX,Operational decision matrix,1917,269,documents/asterdesk/AST-COUPON-011_v2-0.pdf
+AST-COUPON-011,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2433,336,documents/asterdesk/AST-COUPON-011_v2-0.pdf
+AST-COUPON-011,asterdesk,2.0,CASES,Worked customer and operational cases,5472,765,documents/asterdesk/AST-COUPON-011_v2-0.pdf
+AST-COUPON-011,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1564,210,documents/asterdesk/AST-COUPON-011_v2-0.pdf
+AST-COUPON-011,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1678,242,documents/asterdesk/AST-COUPON-011_v2-0.pdf
+AST-COUPON-011,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1332,192,documents/asterdesk/AST-COUPON-011_v2-0.pdf
+AST-CREDIT-012,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1043,147,documents/asterdesk/AST-CREDIT-012_v2-0.html
+AST-CREDIT-012,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1389,189,documents/asterdesk/AST-CREDIT-012_v2-0.html
+AST-CREDIT-012,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1032,141,documents/asterdesk/AST-CREDIT-012_v2-0.html
+AST-CREDIT-012,asterdesk,2.0,MATRIX,Operational decision matrix,1880,266,documents/asterdesk/AST-CREDIT-012_v2-0.html
+AST-CREDIT-012,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2381,335,documents/asterdesk/AST-CREDIT-012_v2-0.html
+AST-CREDIT-012,asterdesk,2.0,CASES,Worked customer and operational cases,5562,773,documents/asterdesk/AST-CREDIT-012_v2-0.html
+AST-CREDIT-012,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1580,212,documents/asterdesk/AST-CREDIT-012_v2-0.html
+AST-CREDIT-012,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1628,241,documents/asterdesk/AST-CREDIT-012_v2-0.html
+AST-CREDIT-012,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1309,191,documents/asterdesk/AST-CREDIT-012_v2-0.html
+AST-DISPUTE-013,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1039,148,documents/asterdesk/AST-DISPUTE-013_v2-0.md
+AST-DISPUTE-013,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1398,196,documents/asterdesk/AST-DISPUTE-013_v2-0.md
+AST-DISPUTE-013,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1058,146,documents/asterdesk/AST-DISPUTE-013_v2-0.md
+AST-DISPUTE-013,asterdesk,2.0,MATRIX,Operational decision matrix,1889,273,documents/asterdesk/AST-DISPUTE-013_v2-0.md
+AST-DISPUTE-013,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2407,340,documents/asterdesk/AST-DISPUTE-013_v2-0.md
+AST-DISPUTE-013,asterdesk,2.0,CASES,Worked customer and operational cases,5544,782,documents/asterdesk/AST-DISPUTE-013_v2-0.md
+AST-DISPUTE-013,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1577,213,documents/asterdesk/AST-DISPUTE-013_v2-0.md
+AST-DISPUTE-013,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1712,253,documents/asterdesk/AST-DISPUTE-013_v2-0.md
+AST-DISPUTE-013,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1331,193,documents/asterdesk/AST-DISPUTE-013_v2-0.md
+AST-TAX-014,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1025,147,documents/asterdesk/AST-TAX-014_v2-0.txt
+AST-TAX-014,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1379,191,documents/asterdesk/AST-TAX-014_v2-0.txt
+AST-TAX-014,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1063,144,documents/asterdesk/AST-TAX-014_v2-0.txt
+AST-TAX-014,asterdesk,2.0,MATRIX,Operational decision matrix,1870,268,documents/asterdesk/AST-TAX-014_v2-0.txt
+AST-TAX-014,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2410,339,documents/asterdesk/AST-TAX-014_v2-0.txt
+AST-TAX-014,asterdesk,2.0,CASES,Worked customer and operational cases,5435,787,documents/asterdesk/AST-TAX-014_v2-0.txt
+AST-TAX-014,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1561,213,documents/asterdesk/AST-TAX-014_v2-0.txt
+AST-TAX-014,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1692,255,documents/asterdesk/AST-TAX-014_v2-0.txt
+AST-TAX-014,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1335,194,documents/asterdesk/AST-TAX-014_v2-0.txt
+AST-RENEW-015,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1027,146,documents/asterdesk/AST-RENEW-015_v2-0.pdf
+AST-RENEW-015,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1415,189,documents/asterdesk/AST-RENEW-015_v2-0.pdf
+AST-RENEW-015,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1103,145,documents/asterdesk/AST-RENEW-015_v2-0.pdf
+AST-RENEW-015,asterdesk,2.0,MATRIX,Operational decision matrix,1906,266,documents/asterdesk/AST-RENEW-015_v2-0.pdf
+AST-RENEW-015,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2448,338,documents/asterdesk/AST-RENEW-015_v2-0.pdf
+AST-RENEW-015,asterdesk,2.0,CASES,Worked customer and operational cases,5508,759,documents/asterdesk/AST-RENEW-015_v2-0.pdf
+AST-RENEW-015,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1571,210,documents/asterdesk/AST-RENEW-015_v2-0.pdf
+AST-RENEW-015,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1718,247,documents/asterdesk/AST-RENEW-015_v2-0.pdf
+AST-RENEW-015,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1361,196,documents/asterdesk/AST-RENEW-015_v2-0.pdf
+AST-ACCESS-016,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1032,146,documents/asterdesk/AST-ACCESS-016_v2-0.md
+AST-ACCESS-016,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1407,187,documents/asterdesk/AST-ACCESS-016_v2-0.md
+AST-ACCESS-016,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1051,139,documents/asterdesk/AST-ACCESS-016_v2-0.md
+AST-ACCESS-016,asterdesk,2.0,MATRIX,Operational decision matrix,1898,264,documents/asterdesk/AST-ACCESS-016_v2-0.md
+AST-ACCESS-016,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2360,327,documents/asterdesk/AST-ACCESS-016_v2-0.md
+AST-ACCESS-016,asterdesk,2.0,CASES,Worked customer and operational cases,5229,732,documents/asterdesk/AST-ACCESS-016_v2-0.md
+AST-ACCESS-016,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1539,207,documents/asterdesk/AST-ACCESS-016_v2-0.md
+AST-ACCESS-016,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1560,228,documents/asterdesk/AST-ACCESS-016_v2-0.md
+AST-ACCESS-016,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1326,194,documents/asterdesk/AST-ACCESS-016_v2-0.md
+AST-SEC-017,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1038,147,documents/asterdesk/AST-SEC-017_v2-0.html
+AST-SEC-017,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1372,182,documents/asterdesk/AST-SEC-017_v2-0.html
+AST-SEC-017,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1013,132,documents/asterdesk/AST-SEC-017_v2-0.html
+AST-SEC-017,asterdesk,2.0,MATRIX,Operational decision matrix,1863,259,documents/asterdesk/AST-SEC-017_v2-0.html
+AST-SEC-017,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2338,322,documents/asterdesk/AST-SEC-017_v2-0.html
+AST-SEC-017,asterdesk,2.0,CASES,Worked customer and operational cases,5405,744,documents/asterdesk/AST-SEC-017_v2-0.html
+AST-SEC-017,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1558,208,documents/asterdesk/AST-SEC-017_v2-0.html
+AST-SEC-017,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1606,232,documents/asterdesk/AST-SEC-017_v2-0.html
+AST-SEC-017,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1347,193,documents/asterdesk/AST-SEC-017_v2-0.html
+AST-PRIV-018,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1046,147,documents/asterdesk/AST-PRIV-018_v2-0.pdf
+AST-PRIV-018,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1412,187,documents/asterdesk/AST-PRIV-018_v2-0.pdf
+AST-PRIV-018,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1063,142,documents/asterdesk/AST-PRIV-018_v2-0.pdf
+AST-PRIV-018,asterdesk,2.0,MATRIX,Operational decision matrix,1903,264,documents/asterdesk/AST-PRIV-018_v2-0.pdf
+AST-PRIV-018,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2389,334,documents/asterdesk/AST-PRIV-018_v2-0.pdf
+AST-PRIV-018,asterdesk,2.0,CASES,Worked customer and operational cases,5400,747,documents/asterdesk/AST-PRIV-018_v2-0.pdf
+AST-PRIV-018,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1558,208,documents/asterdesk/AST-PRIV-018_v2-0.pdf
+AST-PRIV-018,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1634,238,documents/asterdesk/AST-PRIV-018_v2-0.pdf
+AST-PRIV-018,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1361,197,documents/asterdesk/AST-PRIV-018_v2-0.pdf
+AST-EXPORT-019,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1041,147,documents/asterdesk/AST-EXPORT-019_v2-0.txt
+AST-EXPORT-019,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1436,193,documents/asterdesk/AST-EXPORT-019_v2-0.txt
+AST-EXPORT-019,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1068,146,documents/asterdesk/AST-EXPORT-019_v2-0.txt
+AST-EXPORT-019,asterdesk,2.0,MATRIX,Operational decision matrix,1927,270,documents/asterdesk/AST-EXPORT-019_v2-0.txt
+AST-EXPORT-019,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2411,339,documents/asterdesk/AST-EXPORT-019_v2-0.txt
+AST-EXPORT-019,asterdesk,2.0,CASES,Worked customer and operational cases,5651,769,documents/asterdesk/AST-EXPORT-019_v2-0.txt
+AST-EXPORT-019,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1582,211,documents/asterdesk/AST-EXPORT-019_v2-0.txt
+AST-EXPORT-019,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1676,243,documents/asterdesk/AST-EXPORT-019_v2-0.txt
+AST-EXPORT-019,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1323,194,documents/asterdesk/AST-EXPORT-019_v2-0.txt
+AST-RET-020,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1040,148,documents/asterdesk/AST-RET-020_v2-0.md
+AST-RET-020,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1427,193,documents/asterdesk/AST-RET-020_v2-0.md
+AST-RET-020,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1069,143,documents/asterdesk/AST-RET-020_v2-0.md
+AST-RET-020,asterdesk,2.0,MATRIX,Operational decision matrix,1918,270,documents/asterdesk/AST-RET-020_v2-0.md
+AST-RET-020,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2419,336,documents/asterdesk/AST-RET-020_v2-0.md
+AST-RET-020,asterdesk,2.0,CASES,Worked customer and operational cases,5576,780,documents/asterdesk/AST-RET-020_v2-0.md
+AST-RET-020,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1577,212,documents/asterdesk/AST-RET-020_v2-0.md
+AST-RET-020,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1669,244,documents/asterdesk/AST-RET-020_v2-0.md
+AST-RET-020,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1325,193,documents/asterdesk/AST-RET-020_v2-0.md
+AST-STATUS-021,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1025,144,documents/asterdesk/AST-STATUS-021_v2-0.pdf
+AST-STATUS-021,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1420,193,documents/asterdesk/AST-STATUS-021_v2-0.pdf
+AST-STATUS-021,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1083,148,documents/asterdesk/AST-STATUS-021_v2-0.pdf
+AST-STATUS-021,asterdesk,2.0,MATRIX,Operational decision matrix,1911,270,documents/asterdesk/AST-STATUS-021_v2-0.pdf
+AST-STATUS-021,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2394,334,documents/asterdesk/AST-STATUS-021_v2-0.pdf
+AST-STATUS-021,asterdesk,2.0,CASES,Worked customer and operational cases,5342,735,documents/asterdesk/AST-STATUS-021_v2-0.pdf
+AST-STATUS-021,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1548,207,documents/asterdesk/AST-STATUS-021_v2-0.pdf
+AST-STATUS-021,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1631,237,documents/asterdesk/AST-STATUS-021_v2-0.pdf
+AST-STATUS-021,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1354,197,documents/asterdesk/AST-STATUS-021_v2-0.pdf
+AST-SLA-022,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1035,145,documents/asterdesk/AST-SLA-022_v2-0.html
+AST-SLA-022,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1422,191,documents/asterdesk/AST-SLA-022_v2-0.html
+AST-SLA-022,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1082,144,documents/asterdesk/AST-SLA-022_v2-0.html
+AST-SLA-022,asterdesk,2.0,MATRIX,Operational decision matrix,1913,268,documents/asterdesk/AST-SLA-022_v2-0.html
+AST-SLA-022,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2408,333,documents/asterdesk/AST-SLA-022_v2-0.html
+AST-SLA-022,asterdesk,2.0,CASES,Worked customer and operational cases,4831,668,documents/asterdesk/AST-SLA-022_v2-0.html
+AST-SLA-022,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1556,209,documents/asterdesk/AST-SLA-022_v2-0.html
+AST-SLA-022,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1623,239,documents/asterdesk/AST-SLA-022_v2-0.html
+AST-SLA-022,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1317,192,documents/asterdesk/AST-SLA-022_v2-0.html
+AST-OUTAGE-023,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1056,148,documents/asterdesk/AST-OUTAGE-023_v2-0.md
+AST-OUTAGE-023,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1436,197,documents/asterdesk/AST-OUTAGE-023_v2-0.md
+AST-OUTAGE-023,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1086,148,documents/asterdesk/AST-OUTAGE-023_v2-0.md
+AST-OUTAGE-023,asterdesk,2.0,MATRIX,Operational decision matrix,1927,274,documents/asterdesk/AST-OUTAGE-023_v2-0.md
+AST-OUTAGE-023,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2425,339,documents/asterdesk/AST-OUTAGE-023_v2-0.md
+AST-OUTAGE-023,asterdesk,2.0,CASES,Worked customer and operational cases,5485,759,documents/asterdesk/AST-OUTAGE-023_v2-0.md
+AST-OUTAGE-023,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1567,210,documents/asterdesk/AST-OUTAGE-023_v2-0.md
+AST-OUTAGE-023,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1633,238,documents/asterdesk/AST-OUTAGE-023_v2-0.md
+AST-OUTAGE-023,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1330,192,documents/asterdesk/AST-OUTAGE-023_v2-0.md
+AST-MFA-024,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1017,144,documents/asterdesk/AST-MFA-024_v2-0.txt
+AST-MFA-024,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1338,183,documents/asterdesk/AST-MFA-024_v2-0.txt
+AST-MFA-024,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1030,138,documents/asterdesk/AST-MFA-024_v2-0.txt
+AST-MFA-024,asterdesk,2.0,MATRIX,Operational decision matrix,1829,260,documents/asterdesk/AST-MFA-024_v2-0.txt
+AST-MFA-024,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2362,327,documents/asterdesk/AST-MFA-024_v2-0.txt
+AST-MFA-024,asterdesk,2.0,CASES,Worked customer and operational cases,5251,741,documents/asterdesk/AST-MFA-024_v2-0.txt
+AST-MFA-024,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1544,208,documents/asterdesk/AST-MFA-024_v2-0.txt
+AST-MFA-024,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1619,239,documents/asterdesk/AST-MFA-024_v2-0.txt
+AST-MFA-024,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1328,193,documents/asterdesk/AST-MFA-024_v2-0.txt
+AST-SSO-025,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1039,147,documents/asterdesk/AST-SSO-025_v2-0.pdf
+AST-SSO-025,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1378,184,documents/asterdesk/AST-SSO-025_v2-0.pdf
+AST-SSO-025,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1049,138,documents/asterdesk/AST-SSO-025_v2-0.pdf
+AST-SSO-025,asterdesk,2.0,MATRIX,Operational decision matrix,1869,261,documents/asterdesk/AST-SSO-025_v2-0.pdf
+AST-SSO-025,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2392,330,documents/asterdesk/AST-SSO-025_v2-0.pdf
+AST-SSO-025,asterdesk,2.0,CASES,Worked customer and operational cases,5489,760,documents/asterdesk/AST-SSO-025_v2-0.pdf
+AST-SSO-025,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1567,210,documents/asterdesk/AST-SSO-025_v2-0.pdf
+AST-SSO-025,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1648,236,documents/asterdesk/AST-SSO-025_v2-0.pdf
+AST-SSO-025,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1349,195,documents/asterdesk/AST-SSO-025_v2-0.pdf
+AST-OWNER-026,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1031,145,documents/asterdesk/AST-OWNER-026_v2-0.md
+AST-OWNER-026,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1387,185,documents/asterdesk/AST-OWNER-026_v2-0.md
+AST-OWNER-026,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1043,140,documents/asterdesk/AST-OWNER-026_v2-0.md
+AST-OWNER-026,asterdesk,2.0,MATRIX,Operational decision matrix,1878,262,documents/asterdesk/AST-OWNER-026_v2-0.md
+AST-OWNER-026,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2349,329,documents/asterdesk/AST-OWNER-026_v2-0.md
+AST-OWNER-026,asterdesk,2.0,CASES,Worked customer and operational cases,5094,718,documents/asterdesk/AST-OWNER-026_v2-0.md
+AST-OWNER-026,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1522,205,documents/asterdesk/AST-OWNER-026_v2-0.md
+AST-OWNER-026,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1578,232,documents/asterdesk/AST-OWNER-026_v2-0.md
+AST-OWNER-026,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1314,193,documents/asterdesk/AST-OWNER-026_v2-0.md
+AST-NOTIFY-027,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1037,146,documents/asterdesk/AST-NOTIFY-027_v2-0.html
+AST-NOTIFY-027,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1409,185,documents/asterdesk/AST-NOTIFY-027_v2-0.html
+AST-NOTIFY-027,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1052,137,documents/asterdesk/AST-NOTIFY-027_v2-0.html
+AST-NOTIFY-027,asterdesk,2.0,MATRIX,Operational decision matrix,1900,262,documents/asterdesk/AST-NOTIFY-027_v2-0.html
+AST-NOTIFY-027,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2357,323,documents/asterdesk/AST-NOTIFY-027_v2-0.html
+AST-NOTIFY-027,asterdesk,2.0,CASES,Worked customer and operational cases,5219,715,documents/asterdesk/AST-NOTIFY-027_v2-0.html
+AST-NOTIFY-027,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1534,205,documents/asterdesk/AST-NOTIFY-027_v2-0.html
+AST-NOTIFY-027,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1591,229,documents/asterdesk/AST-NOTIFY-027_v2-0.html
+AST-NOTIFY-027,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1322,192,documents/asterdesk/AST-NOTIFY-027_v2-0.html
+AST-RECOVER-028,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1043,147,documents/asterdesk/AST-RECOVER-028_v2-0.pdf
+AST-RECOVER-028,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1344,180,documents/asterdesk/AST-RECOVER-028_v2-0.pdf
+AST-RECOVER-028,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1007,133,documents/asterdesk/AST-RECOVER-028_v2-0.pdf
+AST-RECOVER-028,asterdesk,2.0,MATRIX,Operational decision matrix,1835,257,documents/asterdesk/AST-RECOVER-028_v2-0.pdf
+AST-RECOVER-028,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2335,324,documents/asterdesk/AST-RECOVER-028_v2-0.pdf
+AST-RECOVER-028,asterdesk,2.0,CASES,Worked customer and operational cases,5324,751,documents/asterdesk/AST-RECOVER-028_v2-0.pdf
+AST-RECOVER-028,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1544,209,documents/asterdesk/AST-RECOVER-028_v2-0.pdf
+AST-RECOVER-028,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1589,234,documents/asterdesk/AST-RECOVER-028_v2-0.pdf
+AST-RECOVER-028,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1347,197,documents/asterdesk/AST-RECOVER-028_v2-0.pdf
+AST-WEBHOOK-029,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1032,147,documents/asterdesk/AST-WEBHOOK-029_v2-0.txt
+AST-WEBHOOK-029,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1395,192,documents/asterdesk/AST-WEBHOOK-029_v2-0.txt
+AST-WEBHOOK-029,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1051,145,documents/asterdesk/AST-WEBHOOK-029_v2-0.txt
+AST-WEBHOOK-029,asterdesk,2.0,MATRIX,Operational decision matrix,1886,269,documents/asterdesk/AST-WEBHOOK-029_v2-0.txt
+AST-WEBHOOK-029,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2403,338,documents/asterdesk/AST-WEBHOOK-029_v2-0.txt
+AST-WEBHOOK-029,asterdesk,2.0,CASES,Worked customer and operational cases,5584,768,documents/asterdesk/AST-WEBHOOK-029_v2-0.txt
+AST-WEBHOOK-029,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1577,211,documents/asterdesk/AST-WEBHOOK-029_v2-0.txt
+AST-WEBHOOK-029,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1669,244,documents/asterdesk/AST-WEBHOOK-029_v2-0.txt
+AST-WEBHOOK-029,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1321,194,documents/asterdesk/AST-WEBHOOK-029_v2-0.txt
+AST-API-030,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1026,148,documents/asterdesk/AST-API-030_v2-0.md
+AST-API-030,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1381,192,documents/asterdesk/AST-API-030_v2-0.md
+AST-API-030,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1035,143,documents/asterdesk/AST-API-030_v2-0.md
+AST-API-030,asterdesk,2.0,MATRIX,Operational decision matrix,1872,269,documents/asterdesk/AST-API-030_v2-0.md
+AST-API-030,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2343,331,documents/asterdesk/AST-API-030_v2-0.md
+AST-API-030,asterdesk,2.0,CASES,Worked customer and operational cases,5112,732,documents/asterdesk/AST-API-030_v2-0.md
+AST-API-030,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1529,207,documents/asterdesk/AST-API-030_v2-0.md
+AST-API-030,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1576,236,documents/asterdesk/AST-API-030_v2-0.md
+AST-API-030,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1320,194,documents/asterdesk/AST-API-030_v2-0.md
+AST-REGION-031,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1018,147,documents/asterdesk/AST-REGION-031_v2-0.pdf
+AST-REGION-031,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1355,186,documents/asterdesk/AST-REGION-031_v2-0.pdf
+AST-REGION-031,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1042,138,documents/asterdesk/AST-REGION-031_v2-0.pdf
+AST-REGION-031,asterdesk,2.0,MATRIX,Operational decision matrix,1846,263,documents/asterdesk/AST-REGION-031_v2-0.pdf
+AST-REGION-031,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2372,330,documents/asterdesk/AST-REGION-031_v2-0.pdf
+AST-REGION-031,asterdesk,2.0,CASES,Worked customer and operational cases,5256,755,documents/asterdesk/AST-REGION-031_v2-0.pdf
+AST-REGION-031,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1546,210,documents/asterdesk/AST-REGION-031_v2-0.pdf
+AST-REGION-031,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1648,241,documents/asterdesk/AST-REGION-031_v2-0.pdf
+AST-REGION-031,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1317,192,documents/asterdesk/AST-REGION-031_v2-0.pdf
+AST-ONBOARD-032,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1026,145,documents/asterdesk/AST-ONBOARD-032_v2-0.html
+AST-ONBOARD-032,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1354,186,documents/asterdesk/AST-ONBOARD-032_v2-0.html
+AST-ONBOARD-032,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1035,142,documents/asterdesk/AST-ONBOARD-032_v2-0.html
+AST-ONBOARD-032,asterdesk,2.0,MATRIX,Operational decision matrix,1845,263,documents/asterdesk/AST-ONBOARD-032_v2-0.html
+AST-ONBOARD-032,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2384,335,documents/asterdesk/AST-ONBOARD-032_v2-0.html
+AST-ONBOARD-032,asterdesk,2.0,CASES,Worked customer and operational cases,5480,751,documents/asterdesk/AST-ONBOARD-032_v2-0.html
+AST-ONBOARD-032,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1562,209,documents/asterdesk/AST-ONBOARD-032_v2-0.html
+AST-ONBOARD-032,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1673,243,documents/asterdesk/AST-ONBOARD-032_v2-0.html
+AST-ONBOARD-032,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1335,193,documents/asterdesk/AST-ONBOARD-032_v2-0.html
+AST-USAGE-033,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1028,147,documents/asterdesk/AST-USAGE-033_v2-0.md
+AST-USAGE-033,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1435,201,documents/asterdesk/AST-USAGE-033_v2-0.md
+AST-USAGE-033,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1087,153,documents/asterdesk/AST-USAGE-033_v2-0.md
+AST-USAGE-033,asterdesk,2.0,MATRIX,Operational decision matrix,1926,278,documents/asterdesk/AST-USAGE-033_v2-0.md
+AST-USAGE-033,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2389,341,documents/asterdesk/AST-USAGE-033_v2-0.md
+AST-USAGE-033,asterdesk,2.0,CASES,Worked customer and operational cases,5107,720,documents/asterdesk/AST-USAGE-033_v2-0.md
+AST-USAGE-033,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1527,206,documents/asterdesk/AST-USAGE-033_v2-0.md
+AST-USAGE-033,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1578,239,documents/asterdesk/AST-USAGE-033_v2-0.md
+AST-USAGE-033,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1318,193,documents/asterdesk/AST-USAGE-033_v2-0.md
+AST-DATA-034,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1044,150,documents/asterdesk/AST-DATA-034_v2-0.txt
+AST-DATA-034,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1433,199,documents/asterdesk/AST-DATA-034_v2-0.txt
+AST-DATA-034,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1063,148,documents/asterdesk/AST-DATA-034_v2-0.txt
+AST-DATA-034,asterdesk,2.0,MATRIX,Operational decision matrix,1924,276,documents/asterdesk/AST-DATA-034_v2-0.txt
+AST-DATA-034,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2379,338,documents/asterdesk/AST-DATA-034_v2-0.txt
+AST-DATA-034,asterdesk,2.0,CASES,Worked customer and operational cases,5305,747,documents/asterdesk/AST-DATA-034_v2-0.txt
+AST-DATA-034,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1550,209,documents/asterdesk/AST-DATA-034_v2-0.txt
+AST-DATA-034,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1617,239,documents/asterdesk/AST-DATA-034_v2-0.txt
+AST-DATA-034,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1332,195,documents/asterdesk/AST-DATA-034_v2-0.txt
+AST-CHARGEBACK-035,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1042,145,documents/asterdesk/AST-CHARGEBACK-035_v2-0.pdf
+AST-CHARGEBACK-035,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1373,180,documents/asterdesk/AST-CHARGEBACK-035_v2-0.pdf
+AST-CHARGEBACK-035,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1036,135,documents/asterdesk/AST-CHARGEBACK-035_v2-0.pdf
+AST-CHARGEBACK-035,asterdesk,2.0,MATRIX,Operational decision matrix,1864,257,documents/asterdesk/AST-CHARGEBACK-035_v2-0.pdf
+AST-CHARGEBACK-035,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2384,327,documents/asterdesk/AST-CHARGEBACK-035_v2-0.pdf
+AST-CHARGEBACK-035,asterdesk,2.0,CASES,Worked customer and operational cases,5432,744,documents/asterdesk/AST-CHARGEBACK-035_v2-0.pdf
+AST-CHARGEBACK-035,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1554,208,documents/asterdesk/AST-CHARGEBACK-035_v2-0.pdf
+AST-CHARGEBACK-035,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1633,234,documents/asterdesk/AST-CHARGEBACK-035_v2-0.pdf
+AST-CHARGEBACK-035,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1306,191,documents/asterdesk/AST-CHARGEBACK-035_v2-0.pdf
+AST-HOLD-036,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1045,148,documents/asterdesk/AST-HOLD-036_v2-0.md
+AST-HOLD-036,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1392,187,documents/asterdesk/AST-HOLD-036_v2-0.md
+AST-HOLD-036,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1018,139,documents/asterdesk/AST-HOLD-036_v2-0.md
+AST-HOLD-036,asterdesk,2.0,MATRIX,Operational decision matrix,1883,264,documents/asterdesk/AST-HOLD-036_v2-0.md
+AST-HOLD-036,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2329,329,documents/asterdesk/AST-HOLD-036_v2-0.md
+AST-HOLD-036,asterdesk,2.0,CASES,Worked customer and operational cases,5369,751,documents/asterdesk/AST-HOLD-036_v2-0.md
+AST-HOLD-036,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1552,209,documents/asterdesk/AST-HOLD-036_v2-0.md
+AST-HOLD-036,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1608,244,documents/asterdesk/AST-HOLD-036_v2-0.md
+AST-HOLD-036,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1300,193,documents/asterdesk/AST-HOLD-036_v2-0.md
+AST-RECON-037,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1037,146,documents/asterdesk/AST-RECON-037_v2-0.html
+AST-RECON-037,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1378,187,documents/asterdesk/AST-RECON-037_v2-0.html
+AST-RECON-037,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1029,139,documents/asterdesk/AST-RECON-037_v2-0.html
+AST-RECON-037,asterdesk,2.0,MATRIX,Operational decision matrix,1869,264,documents/asterdesk/AST-RECON-037_v2-0.html
+AST-RECON-037,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2342,325,documents/asterdesk/AST-RECON-037_v2-0.html
+AST-RECON-037,asterdesk,2.0,CASES,Worked customer and operational cases,5186,718,documents/asterdesk/AST-RECON-037_v2-0.html
+AST-RECON-037,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1543,207,documents/asterdesk/AST-RECON-037_v2-0.html
+AST-RECON-037,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1599,236,documents/asterdesk/AST-RECON-037_v2-0.html
+AST-RECON-037,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1339,195,documents/asterdesk/AST-RECON-037_v2-0.html
+AST-AUDIT-038,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1051,149,documents/asterdesk/AST-AUDIT-038_v2-0.pdf
+AST-AUDIT-038,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1422,188,documents/asterdesk/AST-AUDIT-038_v2-0.pdf
+AST-AUDIT-038,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1059,141,documents/asterdesk/AST-AUDIT-038_v2-0.pdf
+AST-AUDIT-038,asterdesk,2.0,MATRIX,Operational decision matrix,1913,265,documents/asterdesk/AST-AUDIT-038_v2-0.pdf
+AST-AUDIT-038,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2364,330,documents/asterdesk/AST-AUDIT-038_v2-0.pdf
+AST-AUDIT-038,asterdesk,2.0,CASES,Worked customer and operational cases,5076,710,documents/asterdesk/AST-AUDIT-038_v2-0.pdf
+AST-AUDIT-038,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1527,205,documents/asterdesk/AST-AUDIT-038_v2-0.pdf
+AST-AUDIT-038,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1560,232,documents/asterdesk/AST-AUDIT-038_v2-0.pdf
+AST-AUDIT-038,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1312,193,documents/asterdesk/AST-AUDIT-038_v2-0.pdf
+AST-QUEUE-039,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1054,149,documents/asterdesk/AST-QUEUE-039_v2-0.txt
+AST-QUEUE-039,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1464,195,documents/asterdesk/AST-QUEUE-039_v2-0.txt
+AST-QUEUE-039,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1120,147,documents/asterdesk/AST-QUEUE-039_v2-0.txt
+AST-QUEUE-039,asterdesk,2.0,MATRIX,Operational decision matrix,1955,272,documents/asterdesk/AST-QUEUE-039_v2-0.txt
+AST-QUEUE-039,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2435,337,documents/asterdesk/AST-QUEUE-039_v2-0.txt
+AST-QUEUE-039,asterdesk,2.0,CASES,Worked customer and operational cases,5211,741,documents/asterdesk/AST-QUEUE-039_v2-0.txt
+AST-QUEUE-039,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1538,208,documents/asterdesk/AST-QUEUE-039_v2-0.txt
+AST-QUEUE-039,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1648,237,documents/asterdesk/AST-QUEUE-039_v2-0.txt
+AST-QUEUE-039,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1344,196,documents/asterdesk/AST-QUEUE-039_v2-0.txt
+AST-FAQ-040,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1029,146,documents/asterdesk/AST-FAQ-040_v2-0.md
+AST-FAQ-040,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1375,182,documents/asterdesk/AST-FAQ-040_v2-0.md
+AST-FAQ-040,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1058,138,documents/asterdesk/AST-FAQ-040_v2-0.md
+AST-FAQ-040,asterdesk,2.0,MATRIX,Operational decision matrix,1866,259,documents/asterdesk/AST-FAQ-040_v2-0.md
+AST-FAQ-040,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2371,327,documents/asterdesk/AST-FAQ-040_v2-0.md
+AST-FAQ-040,asterdesk,2.0,CASES,Worked customer and operational cases,5058,711,documents/asterdesk/AST-FAQ-040_v2-0.md
+AST-FAQ-040,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1521,204,documents/asterdesk/AST-FAQ-040_v2-0.md
+AST-FAQ-040,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1609,234,documents/asterdesk/AST-FAQ-040_v2-0.md
+AST-FAQ-040,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1336,193,documents/asterdesk/AST-FAQ-040_v2-0.md
+AST-HANDBOOK-041,asterdesk,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1056,149,documents/asterdesk/AST-HANDBOOK-041_v2-0.pdf
+AST-HANDBOOK-041,asterdesk,2.0,SCOPE,"Eligible population, channels and exclusions",1444,193,documents/asterdesk/AST-HANDBOOK-041_v2-0.pdf
+AST-HANDBOOK-041,asterdesk,2.0,DECISION,Controlling decision rules and evidence,1070,140,documents/asterdesk/AST-HANDBOOK-041_v2-0.pdf
+AST-HANDBOOK-041,asterdesk,2.0,MATRIX,Operational decision matrix,1935,270,documents/asterdesk/AST-HANDBOOK-041_v2-0.pdf
+AST-HANDBOOK-041,asterdesk,2.0,PROCEDURE,Support-to-resolution procedure,2372,329,documents/asterdesk/AST-HANDBOOK-041_v2-0.pdf
+AST-HANDBOOK-041,asterdesk,2.0,CASES,Worked customer and operational cases,5396,771,documents/asterdesk/AST-HANDBOOK-041_v2-0.pdf
+AST-HANDBOOK-041,asterdesk,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1552,211,documents/asterdesk/AST-HANDBOOK-041_v2-0.pdf
+AST-HANDBOOK-041,asterdesk,2.0,FAQ,Support questions and approved response boundaries,1641,242,documents/asterdesk/AST-HANDBOOK-041_v2-0.pdf
+AST-HANDBOOK-041,asterdesk,2.0,AUDIT,"Quality checks, redaction and lifecycle",1341,196,documents/asterdesk/AST-HANDBOOK-041_v2-0.pdf
+BKH-REF-101,brookhaven,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1029,145,documents/brookhaven/BKH-REF-101_v2-0.pdf
+BKH-REF-101,brookhaven,2.0,SCOPE,"Eligible population, channels and exclusions",1460,193,documents/brookhaven/BKH-REF-101_v2-0.pdf
+BKH-REF-101,brookhaven,2.0,DECISION,Controlling decision rules and evidence,1118,149,documents/brookhaven/BKH-REF-101_v2-0.pdf
+BKH-REF-101,brookhaven,2.0,MATRIX,Operational decision matrix,1951,270,documents/brookhaven/BKH-REF-101_v2-0.pdf
+BKH-REF-101,brookhaven,2.0,PROCEDURE,Support-to-resolution procedure,2455,342,documents/brookhaven/BKH-REF-101_v2-0.pdf
+BKH-REF-101,brookhaven,2.0,CASES,Worked customer and operational cases,5291,747,documents/brookhaven/BKH-REF-101_v2-0.pdf
+BKH-REF-101,brookhaven,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1565,211,documents/brookhaven/BKH-REF-101_v2-0.pdf
+BKH-REF-101,brookhaven,2.0,FAQ,Support questions and approved response boundaries,1694,252,documents/brookhaven/BKH-REF-101_v2-0.pdf
+BKH-REF-101,brookhaven,2.0,AUDIT,"Quality checks, redaction and lifecycle",1323,195,documents/brookhaven/BKH-REF-101_v2-0.pdf
+BKH-REF-101,brookhaven,1.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1031,145,documents/brookhaven/BKH-REF-101_v1-0.html
+BKH-REF-101,brookhaven,1.0,HISTORY,Historical change note,377,53,documents/brookhaven/BKH-REF-101_v1-0.html
+BKH-REF-101,brookhaven,1.0,SCOPE,"Eligible population, channels and exclusions",1460,193,documents/brookhaven/BKH-REF-101_v1-0.html
+BKH-REF-101,brookhaven,1.0,DECISION,Controlling decision rules and evidence,1070,141,documents/brookhaven/BKH-REF-101_v1-0.html
+BKH-REF-101,brookhaven,1.0,MATRIX,Operational decision matrix,1951,270,documents/brookhaven/BKH-REF-101_v1-0.html
+BKH-REF-101,brookhaven,1.0,PROCEDURE,Support-to-resolution procedure,2407,334,documents/brookhaven/BKH-REF-101_v1-0.html
+BKH-REF-101,brookhaven,1.0,CASES,Worked customer and operational cases,5291,747,documents/brookhaven/BKH-REF-101_v1-0.html
+BKH-REF-101,brookhaven,1.0,EXCEPTIONS,Boundary conditions and non-happy paths,1565,211,documents/brookhaven/BKH-REF-101_v1-0.html
+BKH-REF-101,brookhaven,1.0,FAQ,Support questions and approved response boundaries,1694,252,documents/brookhaven/BKH-REF-101_v1-0.html
+BKH-REF-101,brookhaven,1.0,AUDIT,"Quality checks, redaction and lifecycle",1323,195,documents/brookhaven/BKH-REF-101_v1-0.html
+BKH-CAN-102,brookhaven,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1036,147,documents/brookhaven/BKH-CAN-102_v2-0.html
+BKH-CAN-102,brookhaven,2.0,SCOPE,"Eligible population, channels and exclusions",1328,177,documents/brookhaven/BKH-CAN-102_v2-0.html
+BKH-CAN-102,brookhaven,2.0,DECISION,Controlling decision rules and evidence,1015,130,documents/brookhaven/BKH-CAN-102_v2-0.html
+BKH-CAN-102,brookhaven,2.0,MATRIX,Operational decision matrix,1819,254,documents/brookhaven/BKH-CAN-102_v2-0.html
+BKH-CAN-102,brookhaven,2.0,PROCEDURE,Support-to-resolution procedure,2353,322,documents/brookhaven/BKH-CAN-102_v2-0.html
+BKH-CAN-102,brookhaven,2.0,CASES,Worked customer and operational cases,4975,706,documents/brookhaven/BKH-CAN-102_v2-0.html
+BKH-CAN-102,brookhaven,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1553,210,documents/brookhaven/BKH-CAN-102_v2-0.html
+BKH-CAN-102,brookhaven,2.0,FAQ,Support questions and approved response boundaries,1584,231,documents/brookhaven/BKH-CAN-102_v2-0.html
+BKH-CAN-102,brookhaven,2.0,AUDIT,"Quality checks, redaction and lifecycle",1347,194,documents/brookhaven/BKH-CAN-102_v2-0.html
+BKH-BILL-103,brookhaven,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1019,146,documents/brookhaven/BKH-BILL-103_v2-0.md
+BKH-BILL-103,brookhaven,2.0,SCOPE,"Eligible population, channels and exclusions",1384,194,documents/brookhaven/BKH-BILL-103_v2-0.md
+BKH-BILL-103,brookhaven,2.0,DECISION,Controlling decision rules and evidence,1052,146,documents/brookhaven/BKH-BILL-103_v2-0.md
+BKH-BILL-103,brookhaven,2.0,MATRIX,Operational decision matrix,1875,271,documents/brookhaven/BKH-BILL-103_v2-0.md
+BKH-BILL-103,brookhaven,2.0,PROCEDURE,Support-to-resolution procedure,2355,334,documents/brookhaven/BKH-BILL-103_v2-0.md
+BKH-BILL-103,brookhaven,2.0,CASES,Worked customer and operational cases,5022,728,documents/brookhaven/BKH-BILL-103_v2-0.md
+BKH-BILL-103,brookhaven,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1524,207,documents/brookhaven/BKH-BILL-103_v2-0.md
+BKH-BILL-103,brookhaven,2.0,FAQ,Support questions and approved response boundaries,1592,238,documents/brookhaven/BKH-BILL-103_v2-0.md
+BKH-BILL-103,brookhaven,2.0,AUDIT,"Quality checks, redaction and lifecycle",1322,194,documents/brookhaven/BKH-BILL-103_v2-0.md
+BKH-TRIAL-104,brookhaven,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1021,144,documents/brookhaven/BKH-TRIAL-104_v2-0.txt
+BKH-TRIAL-104,brookhaven,2.0,SCOPE,"Eligible population, channels and exclusions",1404,192,documents/brookhaven/BKH-TRIAL-104_v2-0.txt
+BKH-TRIAL-104,brookhaven,2.0,DECISION,Controlling decision rules and evidence,1078,146,documents/brookhaven/BKH-TRIAL-104_v2-0.txt
+BKH-TRIAL-104,brookhaven,2.0,MATRIX,Operational decision matrix,1895,269,documents/brookhaven/BKH-TRIAL-104_v2-0.txt
+BKH-TRIAL-104,brookhaven,2.0,PROCEDURE,Support-to-resolution procedure,2374,332,documents/brookhaven/BKH-TRIAL-104_v2-0.txt
+BKH-TRIAL-104,brookhaven,2.0,CASES,Worked customer and operational cases,4995,710,documents/brookhaven/BKH-TRIAL-104_v2-0.txt
+BKH-TRIAL-104,brookhaven,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1520,205,documents/brookhaven/BKH-TRIAL-104_v2-0.txt
+BKH-TRIAL-104,brookhaven,2.0,FAQ,Support questions and approved response boundaries,1595,237,documents/brookhaven/BKH-TRIAL-104_v2-0.txt
+BKH-TRIAL-104,brookhaven,2.0,AUDIT,"Quality checks, redaction and lifecycle",1326,193,documents/brookhaven/BKH-TRIAL-104_v2-0.txt
+BKH-PLAY-105,brookhaven,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1024,147,documents/brookhaven/BKH-PLAY-105_v2-0.pdf
+BKH-PLAY-105,brookhaven,2.0,SCOPE,"Eligible population, channels and exclusions",1352,182,documents/brookhaven/BKH-PLAY-105_v2-0.pdf
+BKH-PLAY-105,brookhaven,2.0,DECISION,Controlling decision rules and evidence,1031,136,documents/brookhaven/BKH-PLAY-105_v2-0.pdf
+BKH-PLAY-105,brookhaven,2.0,MATRIX,Operational decision matrix,1843,259,documents/brookhaven/BKH-PLAY-105_v2-0.pdf
+BKH-PLAY-105,brookhaven,2.0,PROCEDURE,Support-to-resolution procedure,2353,324,documents/brookhaven/BKH-PLAY-105_v2-0.pdf
+BKH-PLAY-105,brookhaven,2.0,CASES,Worked customer and operational cases,5198,726,documents/brookhaven/BKH-PLAY-105_v2-0.pdf
+BKH-PLAY-105,brookhaven,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1536,206,documents/brookhaven/BKH-PLAY-105_v2-0.pdf
+BKH-PLAY-105,brookhaven,2.0,FAQ,Support questions and approved response boundaries,1579,230,documents/brookhaven/BKH-PLAY-105_v2-0.pdf
+BKH-PLAY-105,brookhaven,2.0,AUDIT,"Quality checks, redaction and lifecycle",1344,195,documents/brookhaven/BKH-PLAY-105_v2-0.pdf
+BKH-DEVICE-106,brookhaven,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1033,146,documents/brookhaven/BKH-DEVICE-106_v2-0.md
+BKH-DEVICE-106,brookhaven,2.0,SCOPE,"Eligible population, channels and exclusions",1378,183,documents/brookhaven/BKH-DEVICE-106_v2-0.md
+BKH-DEVICE-106,brookhaven,2.0,DECISION,Controlling decision rules and evidence,1030,137,documents/brookhaven/BKH-DEVICE-106_v2-0.md
+BKH-DEVICE-106,brookhaven,2.0,MATRIX,Operational decision matrix,1869,260,documents/brookhaven/BKH-DEVICE-106_v2-0.md
+BKH-DEVICE-106,brookhaven,2.0,PROCEDURE,Support-to-resolution procedure,2366,329,documents/brookhaven/BKH-DEVICE-106_v2-0.md
+BKH-DEVICE-106,brookhaven,2.0,CASES,Worked customer and operational cases,5391,756,documents/brookhaven/BKH-DEVICE-106_v2-0.md
+BKH-DEVICE-106,brookhaven,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1557,209,documents/brookhaven/BKH-DEVICE-106_v2-0.md
+BKH-DEVICE-106,brookhaven,2.0,FAQ,Support questions and approved response boundaries,1587,236,documents/brookhaven/BKH-DEVICE-106_v2-0.md
+BKH-DEVICE-106,brookhaven,2.0,AUDIT,"Quality checks, redaction and lifecycle",1299,192,documents/brookhaven/BKH-DEVICE-106_v2-0.md
+BKH-DOWN-107,brookhaven,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1010,144,documents/brookhaven/BKH-DOWN-107_v2-0.html
+BKH-DOWN-107,brookhaven,2.0,SCOPE,"Eligible population, channels and exclusions",1367,185,documents/brookhaven/BKH-DOWN-107_v2-0.html
+BKH-DOWN-107,brookhaven,2.0,DECISION,Controlling decision rules and evidence,1073,142,documents/brookhaven/BKH-DOWN-107_v2-0.html
+BKH-DOWN-107,brookhaven,2.0,MATRIX,Operational decision matrix,1858,262,documents/brookhaven/BKH-DOWN-107_v2-0.html
+BKH-DOWN-107,brookhaven,2.0,PROCEDURE,Support-to-resolution procedure,2370,329,documents/brookhaven/BKH-DOWN-107_v2-0.html
+BKH-DOWN-107,brookhaven,2.0,CASES,Worked customer and operational cases,4977,705,documents/brookhaven/BKH-DOWN-107_v2-0.html
+BKH-DOWN-107,brookhaven,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1515,204,documents/brookhaven/BKH-DOWN-107_v2-0.html
+BKH-DOWN-107,brookhaven,2.0,FAQ,Support questions and approved response boundaries,1590,230,documents/brookhaven/BKH-DOWN-107_v2-0.html
+BKH-DOWN-107,brookhaven,2.0,AUDIT,"Quality checks, redaction and lifecycle",1345,194,documents/brookhaven/BKH-DOWN-107_v2-0.html
+BKH-PRIV-108,brookhaven,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1041,147,documents/brookhaven/BKH-PRIV-108_v2-0.pdf
+BKH-PRIV-108,brookhaven,2.0,SCOPE,"Eligible population, channels and exclusions",1433,189,documents/brookhaven/BKH-PRIV-108_v2-0.pdf
+BKH-PRIV-108,brookhaven,2.0,DECISION,Controlling decision rules and evidence,1081,141,documents/brookhaven/BKH-PRIV-108_v2-0.pdf
+BKH-PRIV-108,brookhaven,2.0,MATRIX,Operational decision matrix,1924,266,documents/brookhaven/BKH-PRIV-108_v2-0.pdf
+BKH-PRIV-108,brookhaven,2.0,PROCEDURE,Support-to-resolution procedure,2395,330,documents/brookhaven/BKH-PRIV-108_v2-0.pdf
+BKH-PRIV-108,brookhaven,2.0,CASES,Worked customer and operational cases,5229,732,documents/brookhaven/BKH-PRIV-108_v2-0.pdf
+BKH-PRIV-108,brookhaven,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1543,207,documents/brookhaven/BKH-PRIV-108_v2-0.pdf
+BKH-PRIV-108,brookhaven,2.0,FAQ,Support questions and approved response boundaries,1621,234,documents/brookhaven/BKH-PRIV-108_v2-0.pdf
+BKH-PRIV-108,brookhaven,2.0,AUDIT,"Quality checks, redaction and lifecycle",1336,194,documents/brookhaven/BKH-PRIV-108_v2-0.pdf
+BKH-APP-109,brookhaven,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1032,146,documents/brookhaven/BKH-APP-109_v2-0.txt
+BKH-APP-109,brookhaven,2.0,SCOPE,"Eligible population, channels and exclusions",1384,185,documents/brookhaven/BKH-APP-109_v2-0.txt
+BKH-APP-109,brookhaven,2.0,DECISION,Controlling decision rules and evidence,1065,142,documents/brookhaven/BKH-APP-109_v2-0.txt
+BKH-APP-109,brookhaven,2.0,MATRIX,Operational decision matrix,1875,262,documents/brookhaven/BKH-APP-109_v2-0.txt
+BKH-APP-109,brookhaven,2.0,PROCEDURE,Support-to-resolution procedure,2375,330,documents/brookhaven/BKH-APP-109_v2-0.txt
+BKH-APP-109,brookhaven,2.0,CASES,Worked customer and operational cases,4549,614,documents/brookhaven/BKH-APP-109_v2-0.txt
+BKH-APP-109,brookhaven,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1523,203,documents/brookhaven/BKH-APP-109_v2-0.txt
+BKH-APP-109,brookhaven,2.0,FAQ,Support questions and approved response boundaries,1600,230,documents/brookhaven/BKH-APP-109_v2-0.txt
+BKH-APP-109,brookhaven,2.0,AUDIT,"Quality checks, redaction and lifecycle",1337,193,documents/brookhaven/BKH-APP-109_v2-0.txt
+BKH-INT-110,brookhaven,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1027,145,documents/brookhaven/BKH-INT-110_v2-0.md
+BKH-INT-110,brookhaven,2.0,SCOPE,"Eligible population, channels and exclusions",1337,179,documents/brookhaven/BKH-INT-110_v2-0.md
+BKH-INT-110,brookhaven,2.0,DECISION,Controlling decision rules and evidence,1014,134,documents/brookhaven/BKH-INT-110_v2-0.md
+BKH-INT-110,brookhaven,2.0,MATRIX,Operational decision matrix,1828,256,documents/brookhaven/BKH-INT-110_v2-0.md
+BKH-INT-110,brookhaven,2.0,PROCEDURE,Support-to-resolution procedure,2322,322,documents/brookhaven/BKH-INT-110_v2-0.md
+BKH-INT-110,brookhaven,2.0,CASES,Worked customer and operational cases,4999,705,documents/brookhaven/BKH-INT-110_v2-0.md
+BKH-INT-110,brookhaven,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1518,204,documents/brookhaven/BKH-INT-110_v2-0.md
+BKH-INT-110,brookhaven,2.0,FAQ,Support questions and approved response boundaries,1537,228,documents/brookhaven/BKH-INT-110_v2-0.md
+BKH-INT-110,brookhaven,2.0,AUDIT,"Quality checks, redaction and lifecycle",1323,192,documents/brookhaven/BKH-INT-110_v2-0.md
+BKH-FAMILY-111,brookhaven,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1041,147,documents/brookhaven/BKH-FAMILY-111_v2-0.pdf
+BKH-FAMILY-111,brookhaven,2.0,SCOPE,"Eligible population, channels and exclusions",1382,191,documents/brookhaven/BKH-FAMILY-111_v2-0.pdf
+BKH-FAMILY-111,brookhaven,2.0,DECISION,Controlling decision rules and evidence,1046,145,documents/brookhaven/BKH-FAMILY-111_v2-0.pdf
+BKH-FAMILY-111,brookhaven,2.0,MATRIX,Operational decision matrix,1873,268,documents/brookhaven/BKH-FAMILY-111_v2-0.pdf
+BKH-FAMILY-111,brookhaven,2.0,PROCEDURE,Support-to-resolution procedure,2358,335,documents/brookhaven/BKH-FAMILY-111_v2-0.pdf
+BKH-FAMILY-111,brookhaven,2.0,CASES,Worked customer and operational cases,5198,742,documents/brookhaven/BKH-FAMILY-111_v2-0.pdf
+BKH-FAMILY-111,brookhaven,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1533,208,documents/brookhaven/BKH-FAMILY-111_v2-0.pdf
+BKH-FAMILY-111,brookhaven,2.0,FAQ,Support questions and approved response boundaries,1618,247,documents/brookhaven/BKH-FAMILY-111_v2-0.pdf
+BKH-FAMILY-111,brookhaven,2.0,AUDIT,"Quality checks, redaction and lifecycle",1337,197,documents/brookhaven/BKH-FAMILY-111_v2-0.pdf
+BKH-RIGHTS-112,brookhaven,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1028,145,documents/brookhaven/BKH-RIGHTS-112_v2-0.html
+BKH-RIGHTS-112,brookhaven,2.0,SCOPE,"Eligible population, channels and exclusions",1342,184,documents/brookhaven/BKH-RIGHTS-112_v2-0.html
+BKH-RIGHTS-112,brookhaven,2.0,DECISION,Controlling decision rules and evidence,1018,140,documents/brookhaven/BKH-RIGHTS-112_v2-0.html
+BKH-RIGHTS-112,brookhaven,2.0,MATRIX,Operational decision matrix,1833,261,documents/brookhaven/BKH-RIGHTS-112_v2-0.html
+BKH-RIGHTS-112,brookhaven,2.0,PROCEDURE,Support-to-resolution procedure,2329,328,documents/brookhaven/BKH-RIGHTS-112_v2-0.html
+BKH-RIGHTS-112,brookhaven,2.0,CASES,Worked customer and operational cases,5049,711,documents/brookhaven/BKH-RIGHTS-112_v2-0.html
+BKH-RIGHTS-112,brookhaven,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1519,204,documents/brookhaven/BKH-RIGHTS-112_v2-0.html
+BKH-RIGHTS-112,brookhaven,2.0,FAQ,Support questions and approved response boundaries,1574,231,documents/brookhaven/BKH-RIGHTS-112_v2-0.html
+BKH-RIGHTS-112,brookhaven,2.0,AUDIT,"Quality checks, redaction and lifecycle",1322,193,documents/brookhaven/BKH-RIGHTS-112_v2-0.html
+BKH-SLA-113,brookhaven,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1018,144,documents/brookhaven/BKH-SLA-113_v2-0.md
+BKH-SLA-113,brookhaven,2.0,SCOPE,"Eligible population, channels and exclusions",1393,188,documents/brookhaven/BKH-SLA-113_v2-0.md
+BKH-SLA-113,brookhaven,2.0,DECISION,Controlling decision rules and evidence,1085,143,documents/brookhaven/BKH-SLA-113_v2-0.md
+BKH-SLA-113,brookhaven,2.0,MATRIX,Operational decision matrix,1884,265,documents/brookhaven/BKH-SLA-113_v2-0.md
+BKH-SLA-113,brookhaven,2.0,PROCEDURE,Support-to-resolution procedure,2379,328,documents/brookhaven/BKH-SLA-113_v2-0.md
+BKH-SLA-113,brookhaven,2.0,CASES,Worked customer and operational cases,4527,644,documents/brookhaven/BKH-SLA-113_v2-0.md
+BKH-SLA-113,brookhaven,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1511,204,documents/brookhaven/BKH-SLA-113_v2-0.md
+BKH-SLA-113,brookhaven,2.0,FAQ,Support questions and approved response boundaries,1579,228,documents/brookhaven/BKH-SLA-113_v2-0.md
+BKH-SLA-113,brookhaven,2.0,AUDIT,"Quality checks, redaction and lifecycle",1331,193,documents/brookhaven/BKH-SLA-113_v2-0.md
+BKH-SEC-114,brookhaven,2.0,DOC-CONTROL,"Document ownership, effective policy and revision handling",1047,148,documents/brookhaven/BKH-SEC-114_v2-0.txt
+BKH-SEC-114,brookhaven,2.0,SCOPE,"Eligible population, channels and exclusions",1360,181,documents/brookhaven/BKH-SEC-114_v2-0.txt
+BKH-SEC-114,brookhaven,2.0,DECISION,Controlling decision rules and evidence,1016,134,documents/brookhaven/BKH-SEC-114_v2-0.txt
+BKH-SEC-114,brookhaven,2.0,MATRIX,Operational decision matrix,1851,258,documents/brookhaven/BKH-SEC-114_v2-0.txt
+BKH-SEC-114,brookhaven,2.0,PROCEDURE,Support-to-resolution procedure,2335,323,documents/brookhaven/BKH-SEC-114_v2-0.txt
+BKH-SEC-114,brookhaven,2.0,CASES,Worked customer and operational cases,5094,719,documents/brookhaven/BKH-SEC-114_v2-0.txt
+BKH-SEC-114,brookhaven,2.0,EXCEPTIONS,Boundary conditions and non-happy paths,1533,206,documents/brookhaven/BKH-SEC-114_v2-0.txt
+BKH-SEC-114,brookhaven,2.0,FAQ,Support questions and approved response boundaries,1567,230,documents/brookhaven/BKH-SEC-114_v2-0.txt
+BKH-SEC-114,brookhaven,2.0,AUDIT,"Quality checks, redaction and lifecycle",1329,194,documents/brookhaven/BKH-SEC-114_v2-0.txt
+AST-CASEBOOK-001,asterdesk,1.0,CASE-CONTEXT,Case background and timeline,1310,199,documents/asterdesk/AST-CASEBOOK-001_v1-0.pdf
+AST-CASEBOOK-001,asterdesk,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1514,202,documents/asterdesk/AST-CASEBOOK-001_v1-0.pdf
+AST-CASEBOOK-001,asterdesk,1.0,CASE-TIMELINE,Event log and reconciliation table,1170,179,documents/asterdesk/AST-CASEBOOK-001_v1-0.pdf
+AST-CASEBOOK-001,asterdesk,1.0,CASE-DECISION,Recommended evidence-based handling,1258,181,documents/asterdesk/AST-CASEBOOK-001_v1-0.pdf
+AST-CASEBOOK-001,asterdesk,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/asterdesk/AST-CASEBOOK-001_v1-0.pdf
+AST-CASEBOOK-001,asterdesk,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1766,247,documents/asterdesk/AST-CASEBOOK-001_v1-0.pdf
+AST-CASEBOOK-002,asterdesk,1.0,CASE-CONTEXT,Case background and timeline,1281,199,documents/asterdesk/AST-CASEBOOK-002_v1-0.html
+AST-CASEBOOK-002,asterdesk,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1501,208,documents/asterdesk/AST-CASEBOOK-002_v1-0.html
+AST-CASEBOOK-002,asterdesk,1.0,CASE-TIMELINE,Event log and reconciliation table,1186,179,documents/asterdesk/AST-CASEBOOK-002_v1-0.html
+AST-CASEBOOK-002,asterdesk,1.0,CASE-DECISION,Recommended evidence-based handling,1272,180,documents/asterdesk/AST-CASEBOOK-002_v1-0.html
+AST-CASEBOOK-002,asterdesk,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/asterdesk/AST-CASEBOOK-002_v1-0.html
+AST-CASEBOOK-002,asterdesk,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1779,255,documents/asterdesk/AST-CASEBOOK-002_v1-0.html
+AST-CASEBOOK-003,asterdesk,1.0,CASE-CONTEXT,Case background and timeline,1306,202,documents/asterdesk/AST-CASEBOOK-003_v1-0.md
+AST-CASEBOOK-003,asterdesk,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1482,204,documents/asterdesk/AST-CASEBOOK-003_v1-0.md
+AST-CASEBOOK-003,asterdesk,1.0,CASE-TIMELINE,Event log and reconciliation table,1170,179,documents/asterdesk/AST-CASEBOOK-003_v1-0.md
+AST-CASEBOOK-003,asterdesk,1.0,CASE-DECISION,Recommended evidence-based handling,1280,180,documents/asterdesk/AST-CASEBOOK-003_v1-0.md
+AST-CASEBOOK-003,asterdesk,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/asterdesk/AST-CASEBOOK-003_v1-0.md
+AST-CASEBOOK-003,asterdesk,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1795,256,documents/asterdesk/AST-CASEBOOK-003_v1-0.md
+AST-CASEBOOK-004,asterdesk,1.0,CASE-CONTEXT,Case background and timeline,1281,200,documents/asterdesk/AST-CASEBOOK-004_v1-0.txt
+AST-CASEBOOK-004,asterdesk,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1453,204,documents/asterdesk/AST-CASEBOOK-004_v1-0.txt
+AST-CASEBOOK-004,asterdesk,1.0,CASE-TIMELINE,Event log and reconciliation table,1162,179,documents/asterdesk/AST-CASEBOOK-004_v1-0.txt
+AST-CASEBOOK-004,asterdesk,1.0,CASE-DECISION,Recommended evidence-based handling,1264,183,documents/asterdesk/AST-CASEBOOK-004_v1-0.txt
+AST-CASEBOOK-004,asterdesk,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/asterdesk/AST-CASEBOOK-004_v1-0.txt
+AST-CASEBOOK-004,asterdesk,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1767,256,documents/asterdesk/AST-CASEBOOK-004_v1-0.txt
+AST-CASEBOOK-005,asterdesk,1.0,CASE-CONTEXT,Case background and timeline,1310,199,documents/asterdesk/AST-CASEBOOK-005_v1-0.pdf
+AST-CASEBOOK-005,asterdesk,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1462,197,documents/asterdesk/AST-CASEBOOK-005_v1-0.pdf
+AST-CASEBOOK-005,asterdesk,1.0,CASE-TIMELINE,Event log and reconciliation table,1154,179,documents/asterdesk/AST-CASEBOOK-005_v1-0.pdf
+AST-CASEBOOK-005,asterdesk,1.0,CASE-DECISION,Recommended evidence-based handling,1246,177,documents/asterdesk/AST-CASEBOOK-005_v1-0.pdf
+AST-CASEBOOK-005,asterdesk,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/asterdesk/AST-CASEBOOK-005_v1-0.pdf
+AST-CASEBOOK-005,asterdesk,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1773,251,documents/asterdesk/AST-CASEBOOK-005_v1-0.pdf
+AST-CASEBOOK-006,asterdesk,1.0,CASE-CONTEXT,Case background and timeline,1333,201,documents/asterdesk/AST-CASEBOOK-006_v1-0.html
+AST-CASEBOOK-006,asterdesk,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1490,204,documents/asterdesk/AST-CASEBOOK-006_v1-0.html
+AST-CASEBOOK-006,asterdesk,1.0,CASE-TIMELINE,Event log and reconciliation table,1146,179,documents/asterdesk/AST-CASEBOOK-006_v1-0.html
+AST-CASEBOOK-006,asterdesk,1.0,CASE-DECISION,Recommended evidence-based handling,1239,178,documents/asterdesk/AST-CASEBOOK-006_v1-0.html
+AST-CASEBOOK-006,asterdesk,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/asterdesk/AST-CASEBOOK-006_v1-0.html
+AST-CASEBOOK-006,asterdesk,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1776,251,documents/asterdesk/AST-CASEBOOK-006_v1-0.html
+AST-CASEBOOK-007,asterdesk,1.0,CASE-CONTEXT,Case background and timeline,1318,198,documents/asterdesk/AST-CASEBOOK-007_v1-0.md
+AST-CASEBOOK-007,asterdesk,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1513,212,documents/asterdesk/AST-CASEBOOK-007_v1-0.md
+AST-CASEBOOK-007,asterdesk,1.0,CASE-TIMELINE,Event log and reconciliation table,1186,179,documents/asterdesk/AST-CASEBOOK-007_v1-0.md
+AST-CASEBOOK-007,asterdesk,1.0,CASE-DECISION,Recommended evidence-based handling,1227,174,documents/asterdesk/AST-CASEBOOK-007_v1-0.md
+AST-CASEBOOK-007,asterdesk,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/asterdesk/AST-CASEBOOK-007_v1-0.md
+AST-CASEBOOK-007,asterdesk,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1771,254,documents/asterdesk/AST-CASEBOOK-007_v1-0.md
+AST-CASEBOOK-008,asterdesk,1.0,CASE-CONTEXT,Case background and timeline,1282,196,documents/asterdesk/AST-CASEBOOK-008_v1-0.txt
+AST-CASEBOOK-008,asterdesk,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1446,198,documents/asterdesk/AST-CASEBOOK-008_v1-0.txt
+AST-CASEBOOK-008,asterdesk,1.0,CASE-TIMELINE,Event log and reconciliation table,1154,179,documents/asterdesk/AST-CASEBOOK-008_v1-0.txt
+AST-CASEBOOK-008,asterdesk,1.0,CASE-DECISION,Recommended evidence-based handling,1206,174,documents/asterdesk/AST-CASEBOOK-008_v1-0.txt
+AST-CASEBOOK-008,asterdesk,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/asterdesk/AST-CASEBOOK-008_v1-0.txt
+AST-CASEBOOK-008,asterdesk,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1735,248,documents/asterdesk/AST-CASEBOOK-008_v1-0.txt
+AST-CASEBOOK-009,asterdesk,1.0,CASE-CONTEXT,Case background and timeline,1309,200,documents/asterdesk/AST-CASEBOOK-009_v1-0.pdf
+AST-CASEBOOK-009,asterdesk,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1483,201,documents/asterdesk/AST-CASEBOOK-009_v1-0.pdf
+AST-CASEBOOK-009,asterdesk,1.0,CASE-TIMELINE,Event log and reconciliation table,1194,179,documents/asterdesk/AST-CASEBOOK-009_v1-0.pdf
+AST-CASEBOOK-009,asterdesk,1.0,CASE-DECISION,Recommended evidence-based handling,1235,174,documents/asterdesk/AST-CASEBOOK-009_v1-0.pdf
+AST-CASEBOOK-009,asterdesk,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/asterdesk/AST-CASEBOOK-009_v1-0.pdf
+AST-CASEBOOK-009,asterdesk,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1777,251,documents/asterdesk/AST-CASEBOOK-009_v1-0.pdf
+AST-CASEBOOK-010,asterdesk,1.0,CASE-CONTEXT,Case background and timeline,1306,200,documents/asterdesk/AST-CASEBOOK-010_v1-0.html
+AST-CASEBOOK-010,asterdesk,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1448,204,documents/asterdesk/AST-CASEBOOK-010_v1-0.html
+AST-CASEBOOK-010,asterdesk,1.0,CASE-TIMELINE,Event log and reconciliation table,1170,179,documents/asterdesk/AST-CASEBOOK-010_v1-0.html
+AST-CASEBOOK-010,asterdesk,1.0,CASE-DECISION,Recommended evidence-based handling,1229,175,documents/asterdesk/AST-CASEBOOK-010_v1-0.html
+AST-CASEBOOK-010,asterdesk,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/asterdesk/AST-CASEBOOK-010_v1-0.html
+AST-CASEBOOK-010,asterdesk,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1736,253,documents/asterdesk/AST-CASEBOOK-010_v1-0.html
+BKH-CASEBOOK-001,brookhaven,1.0,CASE-CONTEXT,Case background and timeline,1285,200,documents/brookhaven/BKH-CASEBOOK-001_v1-0.pdf
+BKH-CASEBOOK-001,brookhaven,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1459,200,documents/brookhaven/BKH-CASEBOOK-001_v1-0.pdf
+BKH-CASEBOOK-001,brookhaven,1.0,CASE-TIMELINE,Event log and reconciliation table,1154,179,documents/brookhaven/BKH-CASEBOOK-001_v1-0.pdf
+BKH-CASEBOOK-001,brookhaven,1.0,CASE-DECISION,Recommended evidence-based handling,1197,171,documents/brookhaven/BKH-CASEBOOK-001_v1-0.pdf
+BKH-CASEBOOK-001,brookhaven,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/brookhaven/BKH-CASEBOOK-001_v1-0.pdf
+BKH-CASEBOOK-001,brookhaven,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1728,251,documents/brookhaven/BKH-CASEBOOK-001_v1-0.pdf
+BKH-CASEBOOK-002,brookhaven,1.0,CASE-CONTEXT,Case background and timeline,1306,198,documents/brookhaven/BKH-CASEBOOK-002_v1-0.html
+BKH-CASEBOOK-002,brookhaven,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1490,198,documents/brookhaven/BKH-CASEBOOK-002_v1-0.html
+BKH-CASEBOOK-002,brookhaven,1.0,CASE-TIMELINE,Event log and reconciliation table,1170,179,documents/brookhaven/BKH-CASEBOOK-002_v1-0.html
+BKH-CASEBOOK-002,brookhaven,1.0,CASE-DECISION,Recommended evidence-based handling,1217,175,documents/brookhaven/BKH-CASEBOOK-002_v1-0.html
+BKH-CASEBOOK-002,brookhaven,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/brookhaven/BKH-CASEBOOK-002_v1-0.html
+BKH-CASEBOOK-002,brookhaven,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1757,247,documents/brookhaven/BKH-CASEBOOK-002_v1-0.html
+BKH-CASEBOOK-003,brookhaven,1.0,CASE-CONTEXT,Case background and timeline,1309,198,documents/brookhaven/BKH-CASEBOOK-003_v1-0.md
+BKH-CASEBOOK-003,brookhaven,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1461,204,documents/brookhaven/BKH-CASEBOOK-003_v1-0.md
+BKH-CASEBOOK-003,brookhaven,1.0,CASE-TIMELINE,Event log and reconciliation table,1162,179,documents/brookhaven/BKH-CASEBOOK-003_v1-0.md
+BKH-CASEBOOK-003,brookhaven,1.0,CASE-DECISION,Recommended evidence-based handling,1180,171,documents/brookhaven/BKH-CASEBOOK-003_v1-0.md
+BKH-CASEBOOK-003,brookhaven,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/brookhaven/BKH-CASEBOOK-003_v1-0.md
+BKH-CASEBOOK-003,brookhaven,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1790,257,documents/brookhaven/BKH-CASEBOOK-003_v1-0.md
+BKH-CASEBOOK-004,brookhaven,1.0,CASE-CONTEXT,Case background and timeline,1300,198,documents/brookhaven/BKH-CASEBOOK-004_v1-0.txt
+BKH-CASEBOOK-004,brookhaven,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1409,193,documents/brookhaven/BKH-CASEBOOK-004_v1-0.txt
+BKH-CASEBOOK-004,brookhaven,1.0,CASE-TIMELINE,Event log and reconciliation table,1162,179,documents/brookhaven/BKH-CASEBOOK-004_v1-0.txt
+BKH-CASEBOOK-004,brookhaven,1.0,CASE-DECISION,Recommended evidence-based handling,1182,170,documents/brookhaven/BKH-CASEBOOK-004_v1-0.txt
+BKH-CASEBOOK-004,brookhaven,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/brookhaven/BKH-CASEBOOK-004_v1-0.txt
+BKH-CASEBOOK-004,brookhaven,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1731,245,documents/brookhaven/BKH-CASEBOOK-004_v1-0.txt
+BKH-CASEBOOK-005,brookhaven,1.0,CASE-CONTEXT,Case background and timeline,1302,197,documents/brookhaven/BKH-CASEBOOK-005_v1-0.pdf
+BKH-CASEBOOK-005,brookhaven,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1547,213,documents/brookhaven/BKH-CASEBOOK-005_v1-0.pdf
+BKH-CASEBOOK-005,brookhaven,1.0,CASE-TIMELINE,Event log and reconciliation table,1146,179,documents/brookhaven/BKH-CASEBOOK-005_v1-0.pdf
+BKH-CASEBOOK-005,brookhaven,1.0,CASE-DECISION,Recommended evidence-based handling,1215,177,documents/brookhaven/BKH-CASEBOOK-005_v1-0.pdf
+BKH-CASEBOOK-005,brookhaven,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/brookhaven/BKH-CASEBOOK-005_v1-0.pdf
+BKH-CASEBOOK-005,brookhaven,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1808,262,documents/brookhaven/BKH-CASEBOOK-005_v1-0.pdf
+BKH-CASEBOOK-006,brookhaven,1.0,CASE-CONTEXT,Case background and timeline,1301,201,documents/brookhaven/BKH-CASEBOOK-006_v1-0.html
+BKH-CASEBOOK-006,brookhaven,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1487,203,documents/brookhaven/BKH-CASEBOOK-006_v1-0.html
+BKH-CASEBOOK-006,brookhaven,1.0,CASE-TIMELINE,Event log and reconciliation table,1178,179,documents/brookhaven/BKH-CASEBOOK-006_v1-0.html
+BKH-CASEBOOK-006,brookhaven,1.0,CASE-DECISION,Recommended evidence-based handling,1208,174,documents/brookhaven/BKH-CASEBOOK-006_v1-0.html
+BKH-CASEBOOK-006,brookhaven,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/brookhaven/BKH-CASEBOOK-006_v1-0.html
+BKH-CASEBOOK-006,brookhaven,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1731,247,documents/brookhaven/BKH-CASEBOOK-006_v1-0.html
+BKH-CASEBOOK-007,brookhaven,1.0,CASE-CONTEXT,Case background and timeline,1283,192,documents/brookhaven/BKH-CASEBOOK-007_v1-0.md
+BKH-CASEBOOK-007,brookhaven,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1478,202,documents/brookhaven/BKH-CASEBOOK-007_v1-0.md
+BKH-CASEBOOK-007,brookhaven,1.0,CASE-TIMELINE,Event log and reconciliation table,1146,179,documents/brookhaven/BKH-CASEBOOK-007_v1-0.md
+BKH-CASEBOOK-007,brookhaven,1.0,CASE-DECISION,Recommended evidence-based handling,1176,169,documents/brookhaven/BKH-CASEBOOK-007_v1-0.md
+BKH-CASEBOOK-007,brookhaven,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/brookhaven/BKH-CASEBOOK-007_v1-0.md
+BKH-CASEBOOK-007,brookhaven,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1748,247,documents/brookhaven/BKH-CASEBOOK-007_v1-0.md
+BKH-CASEBOOK-008,brookhaven,1.0,CASE-CONTEXT,Case background and timeline,1270,194,documents/brookhaven/BKH-CASEBOOK-008_v1-0.txt
+BKH-CASEBOOK-008,brookhaven,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1410,195,documents/brookhaven/BKH-CASEBOOK-008_v1-0.txt
+BKH-CASEBOOK-008,brookhaven,1.0,CASE-TIMELINE,Event log and reconciliation table,1162,179,documents/brookhaven/BKH-CASEBOOK-008_v1-0.txt
+BKH-CASEBOOK-008,brookhaven,1.0,CASE-DECISION,Recommended evidence-based handling,1179,170,documents/brookhaven/BKH-CASEBOOK-008_v1-0.txt
+BKH-CASEBOOK-008,brookhaven,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/brookhaven/BKH-CASEBOOK-008_v1-0.txt
+BKH-CASEBOOK-008,brookhaven,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1716,245,documents/brookhaven/BKH-CASEBOOK-008_v1-0.txt
+BKH-CASEBOOK-009,brookhaven,1.0,CASE-CONTEXT,Case background and timeline,1298,195,documents/brookhaven/BKH-CASEBOOK-009_v1-0.pdf
+BKH-CASEBOOK-009,brookhaven,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1560,209,documents/brookhaven/BKH-CASEBOOK-009_v1-0.pdf
+BKH-CASEBOOK-009,brookhaven,1.0,CASE-TIMELINE,Event log and reconciliation table,1138,179,documents/brookhaven/BKH-CASEBOOK-009_v1-0.pdf
+BKH-CASEBOOK-009,brookhaven,1.0,CASE-DECISION,Recommended evidence-based handling,1203,175,documents/brookhaven/BKH-CASEBOOK-009_v1-0.pdf
+BKH-CASEBOOK-009,brookhaven,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/brookhaven/BKH-CASEBOOK-009_v1-0.pdf
+BKH-CASEBOOK-009,brookhaven,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1796,255,documents/brookhaven/BKH-CASEBOOK-009_v1-0.pdf
+BKH-CASEBOOK-010,brookhaven,1.0,CASE-CONTEXT,Case background and timeline,1296,200,documents/brookhaven/BKH-CASEBOOK-010_v1-0.html
+BKH-CASEBOOK-010,brookhaven,1.0,CASE-EVIDENCE,Source-of-truth observations and discrepancies,1437,195,documents/brookhaven/BKH-CASEBOOK-010_v1-0.html
+BKH-CASEBOOK-010,brookhaven,1.0,CASE-TIMELINE,Event log and reconciliation table,1154,179,documents/brookhaven/BKH-CASEBOOK-010_v1-0.html
+BKH-CASEBOOK-010,brookhaven,1.0,CASE-DECISION,Recommended evidence-based handling,1201,174,documents/brookhaven/BKH-CASEBOOK-010_v1-0.html
+BKH-CASEBOOK-010,brookhaven,1.0,CASE-LESSONS,Failure analysis and RAG evaluation notes,1093,159,documents/brookhaven/BKH-CASEBOOK-010_v1-0.html
+BKH-CASEBOOK-010,brookhaven,1.0,CASE-APPENDIX,Annotated case file fragments and communication drafts,1703,244,documents/brookhaven/BKH-CASEBOOK-010_v1-0.html
