@@ -42,6 +42,29 @@ scripts/                              Local consistency checker
 
 **Session 1: Document extraction**. Read `manifest.csv`, choose one longer PDF `documents/asterdesk/*REF*pdf` or another document with 4+ pages, extract per-page text and inspect section IDs. Compare parser output with what you can read visually. Note headings, tables, headers, section references and failed extraction.
 
+### Phase 2 parser
+
+From the repository root, validate and parse every manifest document with:
+
+```bash
+.venv/bin/python scripts/parse_rag_documents.py
+```
+
+Inspect one exact tenant/document/version without printing the full corpus:
+
+```bash
+.venv/bin/python scripts/parse_rag_documents.py \
+  --inspect-document AST-REF-001 --tenant asterdesk --version 2.0
+```
+
+Phase 1 validates checksums and tenant-safe resolved paths before Phase 2 reads
+any source. PDF output uses one block per physical page with 1-based page
+numbers; HTML and Markdown use ordered structural blocks. Empty PDF pages are
+reported, while wholly empty documents fail parsing. OCR, layout reconstruction,
+normalization, retrieval chunking, embeddings, and persistence are intentionally
+outside this phase. PDF reading order follows PyMuPDF and may differ from complex
+visual layouts; Markdown recognition is limited to ATX (`#`) headings.
+
 **Session 2: Chunking**. Split 3 documents using at least two strategies (simple character windows vs structure-aware). Display first, middle and boundary chunks, their stable document/version/section IDs, token estimates and overlaps; measure boundary errors.
 
 **Session 3: Seed evaluation**. Review 15 questions against the **source** before search exists. Label exact document/version/section spans, no-answer and historical cases. Freeze these labels before retrieval experiments. Build retrieval only after this checkpoint.
