@@ -220,20 +220,22 @@ def _normalize_with_stats(
     normalized_document = replace(document, content=tuple(normalized_blocks))
     input_words = document.extracted_word_count
     output_words = normalized_document.extracted_word_count
-    empty_output = int(input_words > 0 and output_words == 0)
-    if empty_output:
+    if input_words > 0 and output_words == 0:
         raise ValueError("Normalization removed all meaningful document text")
 
-    metadata_changes = sum(
+    # Enforced invariant rather than a reported metric: any provenance change
+    # fails the document, so it appears as a normalization failure.
+    metadata_changed = any(
         getattr(document, name) != getattr(normalized_document, name)
         for name in METADATA_FIELDS
     )
-    missing_sections = sum(
-        source.section != output.section
+    block_provenance_changed = any(
+        (source.block_index, source.page, source.section)
+        != (output.block_index, output.page, output.section)
         for source, output in zip(document.content, normalized_document.content)
     )
-    if metadata_changes or missing_sections:
-        raise ValueError("Normalization changed document or section provenance")
+    if metadata_changed or block_provenance_changed:
+        raise ValueError("Normalization changed document or block provenance")
 
     def duplicate_excess(blocks: tuple[ContentBlock, ...]) -> int:
         """Count repeated non-empty block texts beyond their first occurrence."""
@@ -263,7 +265,6 @@ def _normalize_with_stats(
         input_words=input_words,
         output_words=output_words,
         large_word_reductions=large_reduction,
-        empty_output_documents=empty_output,
         duplicate_blocks_introduced=duplicate_blocks_introduced,
         **counters,
     )

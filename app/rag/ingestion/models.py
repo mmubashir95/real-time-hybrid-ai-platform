@@ -126,9 +126,6 @@ class NormalizationStats:
     bom_artifacts_removed: int = 0
     whitespace_adjustments: int = 0
     large_word_reductions: int = 0
-    missing_sections: int = 0
-    metadata_changes: int = 0
-    empty_output_documents: int = 0
     duplicate_blocks_introduced: int = 0
 
 

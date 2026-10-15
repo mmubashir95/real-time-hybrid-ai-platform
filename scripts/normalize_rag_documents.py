@@ -88,12 +88,6 @@ def print_normalization_report(
         f"Large word-count reductions:     {stats.large_word_reductions}",
         file=output,
     )
-    print(f"Missing sections:                {stats.missing_sections}", file=output)
-    print(f"Metadata changes:                {stats.metadata_changes}", file=output)
-    print(
-        f"Empty output documents:          {stats.empty_output_documents}",
-        file=output,
-    )
     print(
         f"Duplicate blocks introduced:     {stats.duplicate_blocks_introduced}",
         file=output,
