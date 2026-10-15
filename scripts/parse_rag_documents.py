@@ -19,13 +19,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from app.rag.ingestion.discovery import validate_manifest  # noqa: E402
 from app.rag.ingestion.document_parser import parse_documents  # noqa: E402
 from app.rag.ingestion.models import ParsedDocument, ParsingResult  # noqa: E402
 from scripts.discover_rag_documents import (  # noqa: E402
     DEFAULT_MANIFEST_PATH,
     DEFAULT_RAW_DIRECTORY,
     print_report as print_validation_report,
-    validate_manifest,
 )
 
 
@@ -116,12 +116,12 @@ def print_document(document: ParsedDocument, output: TextIO | None = None) -> No
     print(f"Version: {document.version}", file=output)
     print(f"Format: {document.format}", file=output)
     for block in document.content:
+        location = []
         if block.page is not None:
-            label = f"Page {block.page}"
-        elif block.section:
-            label = f"Section: {block.section}"
-        else:
-            label = f"Block {block.block_index}"
+            location.append(f"Page {block.page}")
+        if block.section:
+            location.append(f"Section: {block.section}")
+        label = " | ".join(location) or f"Block {block.block_index}"
         print(f"\n{label}:\n{block.text}", file=output)
 
 

@@ -58,9 +58,12 @@ Inspect one exact tenant/document/version without printing the full corpus:
 ```
 
 Phase 1 validates checksums and tenant-safe resolved paths before Phase 2 reads
-any source. PDF output uses one block per physical page with 1-based page
-numbers; HTML and Markdown use ordered structural blocks. Empty PDF pages are
-reported, while wholly empty documents fail parsing. OCR, layout reconstruction,
+any source. PDF output splits each physical page at `[SECTION-KEY] Title`
+lines, so every block carries a 1-based page number and its section; a section
+continuing onto the next page keeps its name there. TXT is split at the same
+section lines. HTML and Markdown use ordered structural blocks named by their
+headings. Empty PDF pages are reported, while wholly empty documents fail
+parsing. OCR, layout reconstruction,
 normalization, retrieval chunking, embeddings, and persistence are intentionally
 outside this phase. PDF reading order follows PyMuPDF and may differ from complex
 visual layouts; Markdown recognition is limited to ATX (`#`) headings.

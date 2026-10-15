@@ -15,7 +15,7 @@ from app.rag.ingestion.parsers.html_parser import parse_html
 from app.rag.ingestion.parsers.markdown_parser import parse_markdown
 from app.rag.ingestion.parsers.pdf_parser import parse_pdf
 from app.rag.ingestion.parsers.text_parser import parse_text
-from scripts.discover_rag_documents import ValidatedDocument
+from app.rag.ingestion.discovery import ValidatedDocument
 
 
 PARSERS: dict[str, Callable[[Path], tuple[ContentBlock, ...]]] = {

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import io
 import os
@@ -12,12 +13,12 @@ from unittest.mock import patch
 
 import fitz
 
+from app.rag.ingestion.discovery import REQUIRED_COLUMNS, ValidatedDocument
 from app.rag.ingestion.document_parser import parse_document, parse_documents
 from app.rag.ingestion.parsers.html_parser import parse_html
 from app.rag.ingestion.parsers.markdown_parser import parse_markdown
 from app.rag.ingestion.parsers.pdf_parser import parse_pdf
 from app.rag.ingestion.parsers.text_parser import parse_text
-from scripts.discover_rag_documents import ValidatedDocument
 from scripts.parse_rag_documents import main, print_document, print_parsing_report
 
 
@@ -96,8 +97,27 @@ class DocumentParsingTests(unittest.TestCase):
     def test_text_preserves_line_breaks(self) -> None:
         """TXT extraction should retain meaningful source line structure."""
         blocks = parse_text(self.write_text("source.txt", "First\n\nSecond\n"))
-        self.assertEqual(blocks[0].text, "First\n\nSecond\n")
+        self.assertEqual(blocks[0].text, "First\n\nSecond")
         self.assertIsNone(blocks[0].page)
+        self.assertIsNone(blocks[0].section)
+
+    def test_text_section_markers_become_ordered_sections(self) -> None:
+        """Bracketed section headings should attribute TXT text to sections."""
+        blocks = parse_text(
+            self.write_text(
+                "source.txt",
+                "Preamble line\n\n[SCOPE] Who is covered\nScope body\n"
+                "Mentions [DECISION] inline only\n[DECISION] Rules\nRule body\n",
+            )
+        )
+        self.assertEqual(
+            [block.section for block in blocks],
+            [None, "[SCOPE] Who is covered", "[DECISION] Rules"],
+        )
+        self.assertEqual(blocks[0].text, "Preamble line")
+        self.assertIn("Mentions [DECISION] inline only", blocks[1].text)
+        self.assertTrue(blocks[2].text.startswith("[DECISION] Rules\n"))
+        self.assertEqual([block.block_index for block in blocks], [0, 1, 2])
 
     def test_empty_text_is_rejected(self) -> None:
         """Whitespace-only TXT input should be an explicit failure."""
@@ -149,6 +169,41 @@ class DocumentParsingTests(unittest.TestCase):
         self.assertNotIn(".x", combined)
         self.assertTrue(all(block.section == "Policy" for block in blocks))
 
+    def test_html_keeps_text_outside_recognized_content_tags(self) -> None:
+        """Loose and mixed-content text must not be silently discarded."""
+        path = self.write_text(
+            "loose.html",
+            "<body><header><strong>Banner</strong></header><h2>Rules</h2>"
+            "<div>Div-only rule.</div>"
+            "<ul><li>Parent text<ul><li>Child</li></ul></li></ul>"
+            "<table><tr><td>Cell<p>Inner</p></td><td>Other cell</td></tr></table>"
+            "<!-- hidden comment --></body>",
+        )
+        texts = [block.text for block in parse_html(path)]
+        self.assertEqual(
+            texts,
+            [
+                "Banner",
+                "Rules",
+                "Div-only rule.",
+                "Parent text",
+                "Child",
+                "Cell",
+                "Inner",
+                "Other cell",
+            ],
+        )
+
+    def test_html_without_readable_text_is_rejected(self) -> None:
+        """Markup with only head, script, and style content should fail."""
+        path = self.write_text(
+            "empty.html",
+            "<html><head><title>Title</title></head>"
+            "<body><script>run()</script><style>.x{}</style></body></html>",
+        )
+        with self.assertRaisesRegex(ValueError, "no extractable text"):
+            parse_html(path)
+
     def test_html_plain_fragment_uses_fallback_text(self) -> None:
         """HTML with no semantic block tags should still yield readable text."""
         blocks = parse_html(self.write_text("fragment.html", "<span>Useful</span>"))
@@ -160,6 +215,27 @@ class DocumentParsingTests(unittest.TestCase):
         self.assertEqual([block.page for block in blocks], [1, 2, 3])
         self.assertEqual(blocks[1].text, "")
         self.assertEqual([block.block_index for block in blocks], [0, 1, 2])
+
+    def test_pdf_sections_split_pages_and_continue_across_pages(self) -> None:
+        """PDF blocks should carry both their page and their open section."""
+        path = self.make_pdf(
+            "sections.pdf",
+            ["Title\n[SCOPE] Who is covered\nScope body", "More scope", ""],
+        )
+        blocks = parse_pdf(path)
+        self.assertEqual(
+            [(block.page, block.section) for block in blocks],
+            [
+                (1, None),
+                (1, "[SCOPE] Who is covered"),
+                (2, "[SCOPE] Who is covered"),
+                (3, "[SCOPE] Who is covered"),
+            ],
+        )
+        self.assertEqual(blocks[0].text, "Title")
+        self.assertEqual(blocks[2].text, "More scope")
+        self.assertEqual(blocks[3].text, "")
+        self.assertEqual([block.block_index for block in blocks], [0, 1, 2, 3])
 
     def test_pdf_with_no_extractable_text_is_rejected(self) -> None:
         """An image-only or blank PDF should not silently parse as success."""
@@ -286,6 +362,92 @@ class DocumentParsingTests(unittest.TestCase):
 
         self.assertTrue(manifest_path.is_absolute())
         self.assertTrue(raw_directory.is_absolute())
+
+
+class ParsingCommandEndToEndTests(unittest.TestCase):
+    """Run the parsing CLI with real Phase 1 validation on temporary corpora."""
+
+    def setUp(self) -> None:
+        """Create isolated raw tenant directories and a manifest location."""
+        self.temporary_directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary_directory.cleanup)
+        self.root = Path(self.temporary_directory.name)
+        self.raw_directory = self.root / "raw"
+        self.manifest_path = self.root / "manifest.csv"
+        (self.raw_directory / "brookhaven").mkdir(parents=True)
+        self.secret_path = self.raw_directory / "brookhaven" / "secret.txt"
+        self.secret_path.write_text("Brookhaven confidential text", encoding="utf-8")
+
+    def write_manifest(self, file_path: Path, declared_name: str) -> None:
+        """Declare one asterdesk TXT document whose checksum matches file_path."""
+        record = {column: "x" for column in REQUIRED_COLUMNS}
+        record.update(
+            document_id="AST-001",
+            tenant_id="asterdesk",
+            version="1.0",
+            format="txt",
+            path=f"documents/asterdesk/{declared_name}",
+            pdf_pages="",
+            sha256=hashlib.sha256(file_path.read_bytes()).hexdigest(),
+        )
+        with self.manifest_path.open("w", encoding="utf-8", newline="") as manifest:
+            writer = csv.DictWriter(manifest, fieldnames=REQUIRED_COLUMNS)
+            writer.writeheader()
+            writer.writerow(record)
+
+    def run_command(self) -> tuple[int, str]:
+        """Run the CLI against the temporary corpus and capture its output."""
+        output = io.StringIO()
+        with patch("sys.stdout", output):
+            exit_code = main(
+                [
+                    "--manifest",
+                    str(self.manifest_path),
+                    "--raw-directory",
+                    str(self.raw_directory),
+                ]
+            )
+        return exit_code, output.getvalue()
+
+    def test_valid_corpus_is_validated_and_parsed(self) -> None:
+        """A valid tenant-owned document should parse with exit code zero."""
+        tenant_directory = self.raw_directory / "asterdesk"
+        tenant_directory.mkdir()
+        source = tenant_directory / "policy.txt"
+        source.write_text("[SCOPE] Coverage\nAsterDesk text", encoding="utf-8")
+        self.write_manifest(source, "policy.txt")
+
+        exit_code, output = self.run_command()
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Successfully parsed:      1", output)
+        self.assertIn("FINAL STATUS: PASSED", output)
+
+    def test_tenant_directory_symlink_is_rejected_before_parsing(self) -> None:
+        """A tenant folder pointing at another tenant must never be parsed."""
+        (self.raw_directory / "asterdesk").symlink_to(
+            self.raw_directory / "brookhaven", target_is_directory=True
+        )
+        self.write_manifest(self.secret_path, "secret.txt")
+
+        exit_code, output = self.run_command()
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn("Tenant directory resolves outside", output)
+        self.assertNotIn("RAG DOCUMENT PARSING", output)
+
+    def test_file_symlink_to_other_tenant_is_rejected_before_parsing(self) -> None:
+        """A file symlink into another tenant must never be parsed."""
+        tenant_directory = self.raw_directory / "asterdesk"
+        tenant_directory.mkdir()
+        (tenant_directory / "link.txt").symlink_to(self.secret_path)
+        self.write_manifest(self.secret_path, "link.txt")
+
+        exit_code, output = self.run_command()
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn("outside the allowed tenant directory", output)
+        self.assertNotIn("RAG DOCUMENT PARSING", output)
 
 
 if __name__ == "__main__":

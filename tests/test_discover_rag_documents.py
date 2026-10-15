@@ -12,12 +12,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.discover_rag_documents import (
-    REQUIRED_COLUMNS,
-    main,
-    print_report,
-    validate_manifest,
-)
+from app.rag.ingestion.discovery import REQUIRED_COLUMNS, validate_manifest
+from scripts.discover_rag_documents import main, print_report
 
 
 class DocumentDiscoveryTests(unittest.TestCase):
@@ -255,7 +251,7 @@ class DocumentDiscoveryTests(unittest.TestCase):
         self.write_manifest([record])
 
         with patch(
-            "scripts.discover_rag_documents.calculate_sha256",
+            "app.rag.ingestion.discovery.calculate_sha256",
             side_effect=PermissionError("permission denied"),
         ):
             result = validate_manifest(self.manifest_path, self.raw_directory)
