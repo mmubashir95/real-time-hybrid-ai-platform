@@ -120,24 +120,33 @@ def _normalize_whitespace(text: str, format_name: str) -> str:
     inside_markdown_fence = False
 
     for line in lines:
-        fence_match = FENCE_START.match(line) if format_name == "md" else None
+        is_markdown = format_name == "md"
+        fence_match = FENCE_START.match(line) if is_markdown else None
         if inside_markdown_fence and not fence_match:
-            # Code examples may depend on internal spacing, so only remove
-            # trailing extraction whitespace while inside a fenced block.
+            # Code examples may depend on internal spacing and blank lines, so
+            # only remove trailing extraction whitespace inside a fenced block.
             normalized_lines.append(line.rstrip())
             continue
-        preserve_leading = format_name == "md" and (
-            line.startswith(("    ", "\t"))
-            or bool(MARKDOWN_INDENTED_STRUCTURE.match(line))
-        )
-        normalized_lines.append(_normalize_line(line, preserve_leading))
+
+        if is_markdown and MARKDOWN_INDENTED_STRUCTURE.match(line):
+            normalized_line = _normalize_line(line, preserve_leading_space=True)
+        elif is_markdown and line.startswith(("    ", "\t")):
+            # Indented code blocks are as spacing-sensitive as fenced ones.
+            normalized_line = line.rstrip()
+        else:
+            normalized_line = _normalize_line(line, preserve_leading_space=False)
+
+        # More than one empty line carries no extra paragraph information for
+        # the downstream chunker, while one empty line preserves paragraphs.
+        if not normalized_line and normalized_lines and not normalized_lines[-1]:
+            continue
+        normalized_lines.append(normalized_line)
         if fence_match:
             inside_markdown_fence = not inside_markdown_fence
 
-    normalized = "\n".join(normalized_lines).strip()
-    # More than one empty line carries no extra paragraph information for the
-    # downstream chunker, while a double newline still preserves paragraphs.
-    return re.sub(r"\n[ \t]*\n(?:[ \t]*\n)+", "\n\n", normalized)
+    # Strip only surrounding blank lines; a full strip() would remove the
+    # indentation of a leading Markdown code line.
+    return "\n".join(normalized_lines).strip("\n")
 
 
 def _prepare_block_text(

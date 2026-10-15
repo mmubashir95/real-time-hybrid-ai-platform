@@ -159,8 +159,26 @@ class DocumentNormalizationTests(unittest.TestCase):
         )
         text = normalize_document(source).content[0].text
         self.assertIn("value  =  3", text)
-        self.assertIn("    indented code", text)
+        self.assertIn("    indented  code", text)
         self.assertIn("  - nested item", text)
+
+    def test_leading_indented_code_and_fenced_blank_lines_are_kept(self) -> None:
+        """Code at the start of a block or with blank lines must stay intact."""
+        indented = self.make_document("    x  =   1\n    if a:\n        b", "md")
+        fenced = self.make_document(
+            "```\nfirst  = 1\n\n\n\nsecond = 2\n```\n\n\n\nAfter", "md"
+        )
+        self.assertEqual(
+            normalize_document(indented).content[0].text,
+            "    x  =   1\n    if a:\n        b",
+        )
+        self.assertEqual(
+            normalize_document(fenced).content[0].text,
+            "```\nfirst  = 1\n\n\n\nsecond = 2\n```\n\nAfter",
+        )
+        for source in (indented, fenced):
+            once = normalize_document(source)
+            self.assertEqual(normalize_document(once), once)
 
     def test_pdf_removes_only_matching_banner_and_page_labels(self) -> None:
         """PDF rules should be metadata-verified and preserve meaningful edge lines."""
