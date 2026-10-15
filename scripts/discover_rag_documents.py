@@ -157,8 +157,12 @@ def resolve_document_path(
     tenant_root = (raw_root / tenant_id).resolve()
     resolved_path = (tenant_root.joinpath(*declared_path.parts[2:])).resolve()
 
+    # The tenant directory itself must not be a symlink to another location,
+    # such as a different tenant's directory under the same raw root.
+    if tenant_root != raw_root / tenant_id:
+        return None, "Tenant directory resolves outside its expected location"
+
     try:
-        tenant_root.relative_to(raw_root)
         resolved_path.relative_to(tenant_root)
     except ValueError:
         return None, "Document path resolves outside the allowed tenant directory"

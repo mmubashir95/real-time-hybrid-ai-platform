@@ -218,6 +218,26 @@ class DocumentDiscoveryTests(unittest.TestCase):
 
         self.assertTrue(any("outside" in error.message for error in result.errors))
 
+    def test_symlinked_tenant_directory_cannot_expose_another_tenant(self) -> None:
+        """A tenant directory linked to another tenant should be rejected."""
+        other_tenant_directory = self.raw_directory / "brookhaven"
+        other_tenant_directory.mkdir(parents=True)
+        (other_tenant_directory / "secret.txt").write_text(
+            "valid document", encoding="utf-8"
+        )
+        (self.raw_directory / "asterdesk").symlink_to(other_tenant_directory)
+        record = self.make_record(path="documents/asterdesk/secret.txt")
+        self.write_manifest([record])
+
+        result = validate_manifest(self.manifest_path, self.raw_directory)
+
+        self.assertFalse(result.passed)
+        self.assertEqual(result.documents, ())
+        self.assertEqual(
+            [error.message for error in result.errors],
+            ["Tenant directory resolves outside its expected location"],
+        )
+
     def test_empty_manifest_is_handled_explicitly(self) -> None:
         """A header-only manifest should return a clear batch-level error."""
         self.write_manifest([])
