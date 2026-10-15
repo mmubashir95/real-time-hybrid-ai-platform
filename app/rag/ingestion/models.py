@@ -1,6 +1,6 @@
-"""Shared output and error models for document text extraction.
+"""Shared output, error, and diagnostic models for RAG ingestion.
 
-These models deliberately describe parsing only. Retrieval chunks, embeddings,
+These models deliberately stop at normalization. Retrieval chunks, embeddings,
 and storage identifiers belong to later ingestion phases.
 """
 
@@ -103,3 +103,52 @@ class ParsingResult:
     def empty_pdf_pages(self) -> int:
         """Count empty PDF page blocks across successful documents."""
         return sum(document.empty_pdf_pages for document in self.documents)
+
+
+@dataclass(frozen=True)
+class NormalizationStats:
+    """Measured changes and integrity diagnostics for one normalization batch."""
+
+    input_content_blocks: int = 0
+    output_content_blocks: int = 0
+    input_words: int = 0
+    output_words: int = 0
+    markdown_front_matters_removed: int = 0
+    pdf_headers_removed: int = 0
+    pdf_footers_removed: int = 0
+    pdf_page_labels_removed: int = 0
+    bom_artifacts_removed: int = 0
+    whitespace_adjustments: int = 0
+    large_word_reductions: int = 0
+    missing_sections: int = 0
+    metadata_changes: int = 0
+    empty_output_documents: int = 0
+    duplicate_blocks_introduced: int = 0
+
+
+@dataclass(frozen=True)
+class NormalizationError:
+    """An actionable normalization failure for one parsed document."""
+
+    document_id: str
+    tenant_id: str
+    version: str
+    source_path: str
+    error_type: str
+    error_message: str
+
+
+@dataclass(frozen=True)
+class NormalizationResult:
+    """Batch normalization successes, failures, diagnostics, and warnings."""
+
+    total_documents: int
+    documents: tuple[ParsedDocument, ...]
+    errors: tuple[NormalizationError, ...]
+    stats: NormalizationStats
+    warnings: tuple[str, ...] = ()
+
+    @property
+    def passed(self) -> bool:
+        """Return whether every parsed input normalized without integrity errors."""
+        return not self.errors and len(self.documents) == self.total_documents
