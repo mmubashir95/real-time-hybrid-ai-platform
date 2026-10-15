@@ -76,6 +76,48 @@ class DocumentNormalizationTests(unittest.TestCase):
         text = normalize_document(source).content[0].text
         self.assertEqual(text, "Café العربية €40 ≤ 50 on 2026-07-01.")
 
+    def test_spacing_inside_amounts_is_normalized_without_failing(self) -> None:
+        """Whitespace-only changes around currency must not fail the document."""
+        result = normalize_documents(
+            [self.make_document("Refunds over $  500 or ₹  1,000 need approval.")]
+        )
+        self.assertEqual(result.errors, ())
+        self.assertEqual(
+            result.documents[0].content[0].text,
+            "Refunds over $ 500 or ₹ 1,000 need approval.",
+        )
+
+    def test_only_intended_artifact_lines_are_removed(self) -> None:
+        """Every source line must survive in order unless it is a known artifact."""
+        policy_lines = [
+            "Refunds are NOT   permitted after 30 days.",
+            "Refunds over $500 require approval.",
+            "The policy becomes effective on 2026-07-01.",
+            "Refunds are allowed unless the transaction is disputed.",
+            "Never share ₹1,000 vouchers; 30°C café storage applies.",
+        ]
+        artifact_lines = {
+            "pdf": [
+                "SYNTHETIC | AST-TEST-001 v2.0 | asterdesk | active",
+                "Page 1",
+            ],
+            "md": ["---", "document_id: AST-TEST-001", "status: active", "---"],
+            "html": [],
+            "txt": [],
+        }
+        for format_name, artifacts in artifact_lines.items():
+            with self.subTest(format_name=format_name):
+                source_text = "\n".join(artifacts + policy_lines)
+                block = ContentBlock(source_text, 0, page=1)
+                source = self.make_document("", format_name, blocks=(block,))
+                output_lines = (
+                    normalize_document(source).content[0].text.split("\n")
+                )
+                self.assertEqual(
+                    output_lines,
+                    [" ".join(line.split()) for line in policy_lines],
+                )
+
     def test_markdown_front_matter_is_removed_from_first_block_only(self) -> None:
         """Bounded leading metadata should disappear while body rules remain."""
         blocks = (
