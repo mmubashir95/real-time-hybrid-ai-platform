@@ -153,7 +153,16 @@ Flag:
 - excessive comments describing obvious syntax,
 - large blocks of commented-out code.
 
-Review docstrings where they materially improve understanding.
+Require every newly created source file to have a concise module/file docstring
+that explains its responsibility and boundary. Require every newly created
+function, method, and class to have a concise purpose-focused docstring, including
+important inputs, outputs, side effects, or failure behavior when the signature
+does not make them clear.
+
+Confirm that security-sensitive logic, non-obvious control flow, business rules,
+compatibility mappings, and important trade-offs have focused inline comments.
+Do not demand comments for obvious syntax or every executable line; excessive
+comments can make code harder to maintain and should be flagged as well.
 
 ---
 

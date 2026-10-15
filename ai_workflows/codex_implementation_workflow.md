@@ -169,7 +169,16 @@ Use comments for:
 - temporary limitations,
 - performance-sensitive behavior.
 
-Public functions, important services, and non-obvious modules should have concise docstrings when useful.
+Every newly created source file must begin with a concise module/file docstring
+that explains its responsibility and boundary. Every newly created function,
+method, and class must have a concise docstring describing its purpose; include
+important inputs, outputs, side effects, or failure behavior when those are not
+clear from the signature.
+
+Add focused inline comments around non-obvious control flow, security boundaries,
+business rules, compatibility mappings, and important trade-offs. Line-level
+comments are appropriate where they help a human understand why the following
+code exists. Do not require a comment on every executable line.
 
 Do not add comments only to make the code look documented.
 
