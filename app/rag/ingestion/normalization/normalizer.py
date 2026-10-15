@@ -39,8 +39,8 @@ METADATA_FIELDS = tuple(
 )
 
 
-def _strip_markdown_front_matter(text: str) -> tuple[str, bool]:
-    """Remove one properly bounded YAML-like block at the start of Markdown."""
+def _strip_markdown_front_matter(text: str, document_id: str) -> tuple[str, bool]:
+    """Remove a bounded leading metadata block that names this document."""
     lines = text.splitlines(keepends=True)
     if not lines or lines[0].strip() != "---":
         return text, False
@@ -62,6 +62,17 @@ def _strip_markdown_front_matter(text: str) -> tuple[str, bool]:
     if not metadata_lines or not all(
         FRONT_MATTER_KEY.match(line) for line in metadata_lines
     ):
+        return text, False
+
+    # Key-shaped prose such as "Note: refunds are NOT permitted" between two
+    # horizontal rules would pass the shape check, so also require the block
+    # to identify this document, as the PDF banner rule does.
+    declared_ids = {
+        value.strip().strip("\"'")
+        for key, _, value in (line.partition(":") for line in metadata_lines)
+        if key.strip() == "document_id"
+    }
+    if declared_ids != {document_id}:
         return text, False
 
     return "".join(lines[closing_index + 1 :]).lstrip("\r\n"), True
@@ -162,7 +173,9 @@ def _prepare_block_text(
 
     front_matter_removed = False
     if document.format == "md" and is_first_block:
-        text, front_matter_removed = _strip_markdown_front_matter(text)
+        text, front_matter_removed = _strip_markdown_front_matter(
+            text, document.document_id
+        )
 
     headers_removed = footers_removed = page_labels_removed = 0
     if document.format == "pdf":

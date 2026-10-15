@@ -150,6 +150,29 @@ class DocumentNormalizationTests(unittest.TestCase):
             normalize_document(no_closing_rule).content[0].text.startswith("---")
         )
 
+    def test_key_shaped_prose_or_other_document_metadata_is_kept(self) -> None:
+        """Front matter must name this document before it can be removed."""
+        cases = {
+            "prose": (
+                "---\nNote: refunds are NOT permitted after 30 days.\n---\nBody",
+                "NOT permitted",
+            ),
+            "other_document": (
+                "---\ndocument_id: AST-OTHER-999\n---\nBody",
+                "AST-OTHER-999",
+            ),
+            "repeated_block": (
+                "---\ndocument_id: AST-TEST-001\n---\n"
+                "---\nNote: refunds are NOT permitted.\n---\nBody",
+                "NOT permitted",
+            ),
+        }
+        for name, (text, kept_text) in cases.items():
+            with self.subTest(case=name):
+                once = normalize_document(self.make_document(text, "md"))
+                self.assertIn(kept_text, once.content[0].text)
+                self.assertEqual(normalize_document(once), once)
+
     def test_markdown_code_and_indentation_are_preserved(self) -> None:
         """Fenced and indentation-sensitive Markdown should not be flattened."""
         source = self.make_document(
