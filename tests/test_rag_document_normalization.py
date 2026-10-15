@@ -227,6 +227,27 @@ class DocumentNormalizationTests(unittest.TestCase):
         self.assertEqual(result.documents[0].content[0].page, 2)
         self.assertEqual(result.documents[0].content[0].section, "[DECISION] Rules")
 
+    def test_artifact_only_blocks_remain_as_empty_provenance_anchors(self) -> None:
+        """Emptied blocks must stay in place so later block indexes never shift."""
+        blocks = (
+            ContentBlock(
+                "SYNTHETIC | AST-TEST-001 v2.0 | asterdesk | active\nPage 2",
+                4,
+                page=2,
+                section="[DECISION] Rules",
+            ),
+            ContentBlock("Refunds are NOT permitted.", 5, page=2, section="[CASES]"),
+        )
+        normalized = normalize_document(self.make_document("", "pdf", blocks=blocks))
+        self.assertEqual(
+            [(block.text, block.block_index, block.page, block.section)
+             for block in normalized.content],
+            [
+                ("", 4, 2, "[DECISION] Rules"),
+                ("Refunds are NOT permitted.", 5, 2, "[CASES]"),
+            ],
+        )
+
     def test_pdf_does_not_remove_unverified_or_meaningful_repeated_lines(self) -> None:
         """A generic first/last-line rule must never remove policy content."""
         source = self.make_document(

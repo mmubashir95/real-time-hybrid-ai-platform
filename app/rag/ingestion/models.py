@@ -12,7 +12,13 @@ from typing import Any
 
 @dataclass(frozen=True)
 class ContentBlock:
-    """One ordered unit of source text, using zero-based block indexes."""
+    """One ordered unit of source text, using zero-based block indexes.
+
+    After normalization, ``text`` may be empty when a block held only removed
+    artifacts such as a PDF banner or Markdown front matter. Such blocks are
+    kept so block indexes stay traceable; consumers that build retrieval text
+    must skip blocks whose text is empty.
+    """
 
     text: str
     block_index: int
