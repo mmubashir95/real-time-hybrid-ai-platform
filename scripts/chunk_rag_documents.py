@@ -58,6 +58,14 @@ def serialize_chunks(chunks: tuple[DocumentChunk, ...]) -> bytes:
     return text.encode("utf-8")
 
 
+def is_heading_only_chunk(chunk: DocumentChunk) -> bool:
+    """Return whether chunk text contains only its final structural heading."""
+    if not chunk.heading_path:
+        return False
+    text_without_markdown_marker = chunk.text.strip().lstrip("#").strip()
+    return text_without_markdown_marker == chunk.heading_path[-1]
+
+
 def _error_record(error: object, stage: str) -> dict[str, str]:
     """Convert an ingestion error model into one stable report record."""
     return {
@@ -107,6 +115,9 @@ def build_chunking_report(
         chunk.token_count != count_tokens(chunk.text) for chunk in chunks
     )
     empty_chunks = sum(not chunk.text.strip() for chunk in chunks)
+    chunks_below_20_tokens = sum(chunk.token_count < 20 for chunk in chunks)
+    chunks_below_50_tokens = sum(chunk.token_count < 50 for chunk in chunks)
+    heading_only_chunks = sum(is_heading_only_chunk(chunk) for chunk in chunks)
     chunks_bytes = serialize_chunks(chunks)
     failed_document_keys = {
         (
@@ -146,6 +157,9 @@ def build_chunking_report(
         "max_chunk_tokens": max(token_counts, default=0),
         "chunks_exceeding_maximum": chunks_above_maximum,
         "empty_chunks": empty_chunks,
+        "chunks_below_20_tokens": chunks_below_20_tokens,
+        "chunks_below_50_tokens": chunks_below_50_tokens,
+        "heading_only_chunks": heading_only_chunks,
         "inaccurate_token_counts": inaccurate_token_counts,
         "duplicate_chunk_ids": duplicate_chunk_ids,
         "oversized_paragraphs": oversized_paragraphs,
@@ -263,6 +277,9 @@ def print_report(report: dict[str, Any], output: TextIO | None = None) -> None:
         ("min_chunk_tokens", "Minimum chunk tokens"),
         ("avg_chunk_tokens", "Average chunk tokens"),
         ("max_chunk_tokens", "Maximum chunk tokens"),
+        ("chunks_below_20_tokens", "Chunks below 20 tokens"),
+        ("chunks_below_50_tokens", "Chunks below 50 tokens"),
+        ("heading_only_chunks", "Heading-only chunks"),
         ("chunks_exceeding_maximum", "Chunks above maximum"),
         ("duplicate_chunk_ids", "Duplicate chunk IDs"),
     ):

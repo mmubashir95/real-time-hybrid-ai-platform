@@ -32,7 +32,7 @@ DEFAULT_MAX_TOKENS = 500
 DEFAULT_OVERLAP_TOKENS = 50
 TOKENIZER_NAME = "o200k_base"
 TOKENIZER_VERSION = package_version("tiktoken")
-CHUNKING_CONFIG_VERSION = "phase4-v1"
+CHUNKING_CONFIG_VERSION = "phase4-v2"
 SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+")
 FENCE_START = re.compile(r"^\s*(```|~~~)")
 ENCODING = tiktoken.get_encoding(TOKENIZER_NAME)
@@ -69,6 +69,7 @@ class _SourceUnit:
     separator: str
     block_ids: tuple[int, ...]
     pages: tuple[int, ...]
+    is_heading_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -185,17 +186,62 @@ def _logical_sections(document: ParsedDocument) -> tuple[list[_LogicalSection], 
         for paragraph_index, paragraph in enumerate(paragraphs):
             separator = "\n\n" if current_units or paragraph_index else ""
             pages = (block.page,) if block.page is not None else ()
+            # Parser-owned heading blocks are recognizable without guessing
+            # from length: their complete text equals their final path label.
+            is_heading_only = (
+                len(paragraphs) == 1
+                and bool(path)
+                and paragraph.strip() == path[-1]
+            )
             current_units.append(
                 _SourceUnit(
                     text=paragraph,
                     separator=separator,
                     block_ids=(block.block_index,),
                     pages=pages,
+                    is_heading_only=is_heading_only,
                 )
             )
 
     save_section()
-    return sections, empty_blocks_skipped
+    return _attach_heading_only_parents(sections), empty_blocks_skipped
+
+
+def _attach_heading_only_parents(
+    sections: list[_LogicalSection],
+) -> list[_LogicalSection]:
+    """Attach a heading-only parent to its immediate descendant section.
+
+    HTML parsers correctly emit headings as source blocks. When a parent
+    heading is immediately followed by a child heading, treating the path
+    change as an unconditional flush produces a low-information parent chunk.
+    Only a strict descendant relationship permits attachment, so sibling and
+    unrelated sections remain isolated.
+    """
+    combined_sections: list[_LogicalSection] = []
+    for section in sections:
+        if combined_sections:
+            previous = combined_sections[-1]
+            is_descendant = (
+                len(section.heading_path) > len(previous.heading_path)
+                and section.heading_path[: len(previous.heading_path)]
+                == previous.heading_path
+            )
+            previous_is_heading_context = all(
+                unit.is_heading_only for unit in previous.units
+            )
+            if is_descendant and previous_is_heading_context:
+                combined_sections.pop()
+                descendant_units = (
+                    replace(section.units[0], separator="\n\n"),
+                    *section.units[1:],
+                )
+                section = replace(
+                    section,
+                    units=(*previous.units, *descendant_units),
+                )
+        combined_sections.append(section)
+    return combined_sections
 
 
 def _render_units(units: Iterable[_SourceUnit]) -> str:
@@ -293,14 +339,29 @@ def _recursive_units(
     return result, True, fallback_splits
 
 
-def _pack_units(units: list[_SourceUnit], target_tokens: int) -> list[_DraftChunk]:
+def _pack_units(
+    units: list[_SourceUnit],
+    target_tokens: int,
+    max_tokens: int,
+) -> list[_DraftChunk]:
     """Group recursive units to the preferred target without empty chunks."""
     drafts: list[_DraftChunk] = []
     current_units: list[_SourceUnit] = []
 
     for unit in units:
         candidate = [*current_units, unit]
-        if current_units and count_tokens(_render_units(candidate)) > target_tokens:
+        candidate_tokens = count_tokens(_render_units(candidate))
+        heading_context_needs_content = current_units and all(
+            current_unit.is_heading_only for current_unit in current_units
+        )
+        may_attach_heading_context = (
+            heading_context_needs_content and candidate_tokens <= max_tokens
+        )
+        if (
+            current_units
+            and candidate_tokens > target_tokens
+            and not may_attach_heading_context
+        ):
             drafts.append(_DraftChunk((), tuple(current_units)))
             current_units = [replace(unit, separator="")]
         else:
@@ -379,7 +440,11 @@ def _draft_document(
 
         section_drafts = [
             replace(draft, heading_path=section.heading_path)
-            for draft in _pack_units(recursive, config.target_tokens)
+            for draft in _pack_units(
+                recursive,
+                config.target_tokens,
+                config.max_tokens,
+            )
         ]
         for draft_index, draft in enumerate(section_drafts):
             if draft_index == 0:

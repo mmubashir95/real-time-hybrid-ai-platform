@@ -112,8 +112,12 @@ class DocumentChunkingTests(unittest.TestCase):
     def test_section_boundaries_are_never_combined_or_overlapped(self) -> None:
         """Even generous budgets must keep unrelated top-level sections apart."""
         document = make_document(
-            ContentBlock("Refund terms.", 0, section="Refunds"),
-            ContentBlock("Shipping terms.", 1, section="Shipping"),
+            ContentBlock(
+                "Refunds", 0, section="Refunds", heading_path=("Refunds",)
+            ),
+            ContentBlock(
+                "Shipping", 1, section="Shipping", heading_path=("Shipping",)
+            ),
         )
         chunks = chunk_document(
             document,
@@ -123,6 +127,113 @@ class DocumentChunkingTests(unittest.TestCase):
         self.assertEqual(chunks[0].heading_path, ("Refunds",))
         self.assertEqual(chunks[1].heading_path, ("Shipping",))
         self.assertNotIn("Refund", chunks[1].text)
+
+    def test_heading_only_parent_is_attached_to_related_descendant_content(self) -> None:
+        """A parent heading should not be isolated from its immediate child."""
+        document = make_document(
+            ContentBlock(
+                "Refund Policy",
+                0,
+                section="Refund Policy",
+                heading_path=("Refund Policy",),
+            ),
+            ContentBlock(
+                "Eligibility",
+                1,
+                section="Eligibility",
+                heading_path=("Refund Policy", "Eligibility"),
+            ),
+            ContentBlock(
+                "Customers can request refunds within 30 days.",
+                2,
+                section="Eligibility",
+                heading_path=("Refund Policy", "Eligibility"),
+            ),
+        )
+        chunks = chunk_document(document, ChunkingConfig(overlap_tokens=0))
+        self.assertEqual(len(chunks), 1)
+        self.assertEqual(
+            chunks[0].text,
+            "Refund Policy\n\nEligibility\n\n"
+            "Customers can request refunds within 30 days.",
+        )
+        self.assertEqual(chunks[0].source_block_ids, (0, 1, 2))
+        self.assertEqual(chunks[0].heading_path, ("Refund Policy", "Eligibility"))
+
+    def test_heading_without_descendant_content_remains_source_truth(self) -> None:
+        """A standalone heading is retained rather than given invented content."""
+        document = make_document(
+            ContentBlock(
+                "Empty Section",
+                0,
+                section="Empty Section",
+                heading_path=("Empty Section",),
+            )
+        )
+        chunks = chunk_document(document, ChunkingConfig(overlap_tokens=0))
+        self.assertEqual([chunk.text for chunk in chunks], ["Empty Section"])
+
+    def test_meaningful_short_passage_is_preserved(self) -> None:
+        """Token count alone must not trigger merging or removal."""
+        fact = "Maximum refund period: 30 days."
+        document = make_document(ContentBlock(fact, 0, section="Eligibility"))
+        chunks = chunk_document(document, ChunkingConfig(overlap_tokens=0))
+        self.assertEqual([chunk.text for chunk in chunks], [fact])
+
+    def test_heading_attachment_never_exceeds_hard_maximum(self) -> None:
+        """A related heading remains separate when no bounded merge can fit."""
+        document = make_document(
+            ContentBlock(
+                "Large Section",
+                0,
+                section="Large Section",
+                heading_path=("Large Section",),
+            ),
+            ContentBlock(
+                "Detail",
+                1,
+                section="Detail",
+                heading_path=("Large Section", "Detail"),
+            ),
+            ContentBlock(
+                "x" * 1000,
+                2,
+                section="Detail",
+                heading_path=("Large Section", "Detail"),
+            ),
+        )
+        chunks = chunk_document(
+            document,
+            ChunkingConfig(target_tokens=20, max_tokens=25, overlap_tokens=0),
+        )
+        self.assertTrue(all(chunk.token_count <= 25 for chunk in chunks))
+        self.assertEqual(
+            "".join(chunk.text.replace("\n", "") for chunk in chunks),
+            "Large SectionDetail" + "x" * 1000,
+        )
+
+    def test_batch_keeps_document_security_boundaries_isolated(self) -> None:
+        """Tenant, version, and access scope remain owned by each document."""
+        first = make_document(
+            ContentBlock("Tenant A fact.", 0),
+            tenant_id="tenant-a",
+            version="1.0",
+            visibility="private",
+        )
+        second = make_document(
+            ContentBlock("Tenant B fact.", 0),
+            tenant_id="tenant-b",
+            version="2.0",
+            visibility="public",
+        )
+        chunks = chunk_documents((first, second)).chunks
+        self.assertEqual(
+            [
+                (chunk.tenant_id, chunk.document_version, chunk.access_scope)
+                for chunk in chunks
+            ],
+            [("tenant-a", "1.0", "private"), ("tenant-b", "2.0", "public")],
+        )
 
     def test_oversized_paragraph_prefers_sentence_boundaries(self) -> None:
         """A long paragraph splits into complete sentences when they fit."""
@@ -172,7 +283,7 @@ class DocumentChunkingTests(unittest.TestCase):
             original,
             chunk_document(replace(document, version="2.0"), config)[0].chunk_id,
         )
-        changed_config = ChunkingConfig(overlap_tokens=0, config_version="phase4-v2")
+        changed_config = ChunkingConfig(overlap_tokens=0, config_version="phase4-v3")
         self.assertNotEqual(
             original, chunk_document(document, changed_config)[0].chunk_id
         )
@@ -271,6 +382,11 @@ class ChunkArtifactTests(unittest.TestCase):
         self.assertEqual(first_report["documents_with_zero_chunks"], 0)
         self.assertEqual(first_report["chunks_exceeding_maximum"], 0)
         self.assertEqual(first_report["duplicate_chunk_ids"], 0)
+        self.assertEqual(first_report["heading_only_chunks"], 0)
+        self.assertEqual(
+            first_report["chunking_configuration"]["config_version"],
+            "phase4-v2",
+        )
         self.assertEqual(serialize_chunks(first_chunks), serialize_chunks(second_chunks))
         self.assertEqual(first_report, second_report)
 
