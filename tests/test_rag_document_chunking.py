@@ -256,6 +256,48 @@ class DocumentChunkingTests(unittest.TestCase):
         self.assertEqual("".join(chunk.text for chunk in chunks), text)
         self.assertTrue(all(chunk.token_count <= 25 for chunk in chunks))
 
+    def test_oversized_case_section_splits_between_complete_cases(self) -> None:
+        """Each case keeps its title and body, and no case leaks into another."""
+        cases = [
+            f"TST-POL-CASE-0{index} — Case title {index}. "
+            + " ".join(
+                f"Case {index} detail sentence {sentence} for the agent."
+                for sentence in range(5)
+            )
+            for index in range(1, 10)
+        ]
+        text = "[CASES] Worked cases\n" + "\n".join(cases)
+        document = make_document(ContentBlock(text, 0, section="[CASES] Worked cases"))
+        config = ChunkingConfig(target_tokens=150, max_tokens=200, overlap_tokens=20)
+        chunks = chunk_document(document, config)
+
+        self.assertGreater(count_tokens(text), config.max_tokens)
+        self.assertGreater(len(chunks), 1)
+        self.assertTrue(all(chunk.token_count <= 200 for chunk in chunks))
+        # Without overlap at case boundaries, every chunk after the first
+        # starts with a case ID and the chunks rebuild the source exactly.
+        self.assertTrue(
+            all(chunk.text.startswith("TST-POL-CASE-") for chunk in chunks[1:])
+        )
+        self.assertEqual("\n".join(chunk.text for chunk in chunks), text)
+        for case in cases:
+            self.assertEqual(sum(case in chunk.text for chunk in chunks), 1)
+
+    def test_case_larger_than_maximum_still_splits_at_sentences(self) -> None:
+        """A single oversized case falls back to bounded sentence splitting."""
+        body = " ".join(
+            f"Detail sentence {index} explains the case." for index in range(40)
+        )
+        text = f"TST-POL-CASE-01 — Long case. {body}\nTST-POL-CASE-02 — Short case."
+        document = make_document(ContentBlock(text, 0, section="Cases"))
+        config = ChunkingConfig(target_tokens=60, max_tokens=80, overlap_tokens=10)
+        chunks = chunk_document(document, config)
+
+        self.assertGreater(len(chunks), 2)
+        self.assertTrue(all(chunk.token_count <= 80 for chunk in chunks))
+        self.assertTrue(chunks[0].text.startswith("TST-POL-CASE-01 — Long case."))
+        self.assertTrue(chunks[-1].text.endswith("\nTST-POL-CASE-02 — Short case."))
+
     def test_overlap_is_bounded_and_does_not_create_overlap_only_chunks(self) -> None:
         """Adjacent same-section chunks may share context without exceeding max."""
         paragraphs = [
@@ -283,7 +325,9 @@ class DocumentChunkingTests(unittest.TestCase):
             original,
             chunk_document(replace(document, version="2.0"), config)[0].chunk_id,
         )
-        changed_config = ChunkingConfig(overlap_tokens=0, config_version="phase4-v3")
+        changed_config = ChunkingConfig(
+            overlap_tokens=0, config_version="phase4-changed"
+        )
         self.assertNotEqual(
             original, chunk_document(document, changed_config)[0].chunk_id
         )
@@ -385,7 +429,7 @@ class ChunkArtifactTests(unittest.TestCase):
         self.assertEqual(first_report["heading_only_chunks"], 0)
         self.assertEqual(
             first_report["chunking_configuration"]["config_version"],
-            "phase4-v2",
+            "phase4-v3",
         )
         self.assertEqual(serialize_chunks(first_chunks), serialize_chunks(second_chunks))
         self.assertEqual(first_report, second_report)

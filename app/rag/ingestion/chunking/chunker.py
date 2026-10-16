@@ -3,7 +3,8 @@
 The chunker consumes the existing immutable ``ParsedDocument`` representation.
 It never opens source files, reparses markup, mutates normalized blocks, or
 performs embedding and retrieval work. Splitting proceeds from trustworthy
-section metadata to blocks, paragraphs, sentences, and finally model tokens.
+section metadata to blocks, paragraphs, case records, sentences, and finally
+model tokens.
 """
 
 from __future__ import annotations
@@ -32,8 +33,13 @@ DEFAULT_MAX_TOKENS = 500
 DEFAULT_OVERLAP_TOKENS = 50
 TOKENIZER_NAME = "o200k_base"
 TOKENIZER_VERSION = package_version("tiktoken")
-CHUNKING_CONFIG_VERSION = "phase4-v2"
+CHUNKING_CONFIG_VERSION = "phase4-v3"
 SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+")
+# TXT and PDF parsers keep a whole [CASES] section in one paragraph, with each
+# worked case on its own line opened by an ID such as "AST-CAN-CASE-05 — ".
+# Splitting before those lines keeps every case title with its own body.
+CASE_RECORD_START = re.compile(r"[A-Z]+-[A-Z0-9]+-CASE-\d+ — ")
+CASE_RECORD_BOUNDARY = re.compile(rf"\n(?={CASE_RECORD_START.pattern})")
 FENCE_START = re.compile(r"^\s*(```|~~~)")
 ENCODING = tiktoken.get_encoding(TOKENIZER_NAME)
 
@@ -70,6 +76,7 @@ class _SourceUnit:
     block_ids: tuple[int, ...]
     pages: tuple[int, ...]
     is_heading_only: bool = False
+    starts_case_record: bool = False
 
 
 @dataclass(frozen=True)
@@ -306,6 +313,7 @@ def _token_fallback(unit: _SourceUnit, max_tokens: int) -> list[_SourceUnit]:
                 separator=unit.separator if not pieces else "",
                 block_ids=unit.block_ids,
                 pages=unit.pages,
+                starts_case_record=unit.starts_case_record and not pieces,
             )
         )
         start = fitted_end
@@ -313,27 +321,64 @@ def _token_fallback(unit: _SourceUnit, max_tokens: int) -> list[_SourceUnit]:
     return pieces
 
 
-def _recursive_units(
+def _split_case_records(unit: _SourceUnit) -> list[_SourceUnit]:
+    """Split a paragraph before each line that opens a worked case record.
+
+    The newline between records is kept as the separator so rendering the
+    pieces reproduces the original text exactly.
+    """
+    records = CASE_RECORD_BOUNDARY.split(unit.text)
+    return [
+        replace(
+            unit,
+            text=record,
+            separator=unit.separator if record_index == 0 else "\n",
+            starts_case_record=bool(CASE_RECORD_START.match(record)),
+        )
+        for record_index, record in enumerate(records)
+    ]
+
+
+def _split_sentence_units(
     unit: _SourceUnit,
     max_tokens: int,
-) -> tuple[list[_SourceUnit], bool, int]:
-    """Split an oversized paragraph at sentences, then model tokens."""
-    if count_tokens(unit.text) <= max_tokens:
-        return [unit], False, 0
-
+) -> tuple[list[_SourceUnit], int]:
+    """Split oversized text at sentences, then model tokens."""
     result: list[_SourceUnit] = []
     fallback_splits = 0
     for sentence_index, sentence in enumerate(_split_sentences(unit.text)):
+        is_first_sentence = sentence_index == 0
         sentence_unit = replace(
             unit,
             text=sentence,
-            separator=unit.separator if sentence_index == 0 else " ",
+            separator=unit.separator if is_first_sentence else " ",
+            starts_case_record=unit.starts_case_record and is_first_sentence,
         )
         if count_tokens(sentence) <= max_tokens:
             result.append(sentence_unit)
             continue
         pieces = _token_fallback(sentence_unit, max_tokens)
         fallback_splits += len(pieces)
+        result.extend(pieces)
+    return result, fallback_splits
+
+
+def _recursive_units(
+    unit: _SourceUnit,
+    max_tokens: int,
+) -> tuple[list[_SourceUnit], bool, int]:
+    """Split an oversized paragraph at case records, sentences, then tokens."""
+    if count_tokens(unit.text) <= max_tokens:
+        return [unit], False, 0
+
+    result: list[_SourceUnit] = []
+    fallback_splits = 0
+    for record in _split_case_records(unit):
+        if count_tokens(record.text) <= max_tokens:
+            result.append(record)
+            continue
+        pieces, record_fallback_splits = _split_sentence_units(record, max_tokens)
+        fallback_splits += record_fallback_splits
         result.extend(pieces)
 
     return result, True, fallback_splits
@@ -447,7 +492,10 @@ def _draft_document(
             )
         ]
         for draft_index, draft in enumerate(section_drafts):
-            if draft_index == 0:
+            # Overlap bridges a cut through running text. A cut between two
+            # complete case records needs no bridge, and the overlap would
+            # prepend a fragment of the previous, unrelated case.
+            if draft_index == 0 or draft.units[0].starts_case_record:
                 drafts.append(draft)
                 continue
             previous_source_draft = section_drafts[draft_index - 1]
