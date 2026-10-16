@@ -6,3 +6,4 @@ asyncpg==0.31.0
 uvicorn==0.54.0
 beautifulsoup4==4.14.2
 PyMuPDF==1.26.5
+tiktoken==0.12.0
