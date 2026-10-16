@@ -1,9 +1,20 @@
+# Web API framework and ASGI development server
 fastapi==0.141.1
+uvicorn==0.54.0
+
+# OpenAI API client used by the AI service layer
 openai==3.19.2
+
+# Data validation, settings, and API request/response schemas
 pydantic==2.13.5
+
+# Asynchronous PostgreSQL database access
 SQLAlchemy[asyncio]==2.1.1
 asyncpg==0.31.0
-uvicorn==0.54.0
+
+# RAG source-document parsing: HTML and PDF
 beautifulsoup4==4.14.2
 PyMuPDF==1.26.5
+
+# Model-compatible token counting for RAG document chunking
 tiktoken==0.12.0
