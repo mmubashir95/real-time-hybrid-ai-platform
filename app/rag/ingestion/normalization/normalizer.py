@@ -230,8 +230,8 @@ def _normalize_with_stats(
         for name in METADATA_FIELDS
     )
     block_provenance_changed = any(
-        (source.block_index, source.page, source.section)
-        != (output.block_index, output.page, output.section)
+        (source.block_index, source.page, source.section, source.heading_path)
+        != (output.block_index, output.page, output.section, output.heading_path)
         for source, output in zip(document.content, normalized_document.content)
     )
     if metadata_changed or block_provenance_changed:

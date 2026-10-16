@@ -74,12 +74,25 @@ def parse_html(file_path: Path) -> tuple[ContentBlock, ...]:
 
     blocks: list[ContentBlock] = []
     current_section: str | None = None
+    current_heading_path: tuple[str, ...] = ()
+    heading_stack: list[tuple[int, str]] = []
     for owner, texts in _text_runs(soup.body or soup):
         text = " ".join(texts)
         if owner is not None and owner.name in HEADING_TAGS:
             current_section = text
+            level = int(owner.name[1])
+            # HTML heading levels express the hierarchy directly. A skipped
+            # level retains the nearest real ancestor without inventing one.
+            heading_stack = [item for item in heading_stack if item[0] < level]
+            heading_stack.append((level, text))
+            current_heading_path = tuple(item[1] for item in heading_stack)
         blocks.append(
-            ContentBlock(text=text, section=current_section, block_index=len(blocks))
+            ContentBlock(
+                text=text,
+                section=current_section,
+                heading_path=current_heading_path,
+                block_index=len(blocks),
+            )
         )
 
     if not blocks:

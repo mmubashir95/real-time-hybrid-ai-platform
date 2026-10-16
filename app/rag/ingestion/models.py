@@ -1,7 +1,7 @@
 """Shared output, error, and diagnostic models for RAG ingestion.
 
-These models deliberately stop at normalization. Retrieval chunks, embeddings,
-and storage identifiers belong to later ingestion phases.
+These models cover parsing, normalization, and deterministic text chunks.
+Embeddings and storage identifiers belong to later ingestion phases.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ class ContentBlock:
     block_index: int
     page: int | None = None
     section: str | None = None
+    heading_path: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -155,3 +156,78 @@ class NormalizationResult:
     def passed(self) -> bool:
         """Return whether every parsed input normalized without integrity errors."""
         return not self.errors and len(self.documents) == self.total_documents
+
+
+@dataclass(frozen=True)
+class DocumentChunk:
+    """One token-bounded chunk with source and access-control metadata."""
+
+    chunk_id: str
+    document_id: str
+    document_version: str
+    tenant_id: str
+    document_status: str
+    effective_date: str
+    chunk_index: int
+    heading_path: tuple[str, ...]
+    text: str
+    token_count: int
+    source_file: str
+    source_type: str
+    start_page: int | None
+    end_page: int | None
+    source_block_ids: tuple[int, ...]
+    tokenizer_name: str
+    tokenizer_version: str
+    chunking_config_version: str
+    access_scope: str
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a deterministic JSON-compatible chunk representation."""
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ChunkingStats:
+    """Measured processing and recursive-splitting diagnostics."""
+
+    normalized_blocks_processed: int = 0
+    empty_blocks_skipped: int = 0
+    oversized_paragraphs: int = 0
+    token_fallback_splits: int = 0
+    duplicated_overlap_tokens: int = 0
+
+
+@dataclass(frozen=True)
+class ChunkingError:
+    """A document-level chunking failure with its pipeline stage."""
+
+    document_id: str
+    tenant_id: str
+    version: str
+    source_path: str
+    processing_stage: str
+    error_type: str
+    error_message: str
+
+
+@dataclass(frozen=True)
+class ChunkingResult:
+    """Batch chunking outcome containing chunks, failures, and diagnostics."""
+
+    total_documents: int
+    processed_documents: int
+    documents_with_chunks: int
+    zero_chunk_documents: tuple[str, ...]
+    chunks: tuple[DocumentChunk, ...]
+    errors: tuple[ChunkingError, ...]
+    stats: ChunkingStats
+
+    @property
+    def passed(self) -> bool:
+        """Return whether all input documents chunked and produced content."""
+        return (
+            not self.errors
+            and not self.zero_chunk_documents
+            and self.processed_documents == self.total_documents
+        )
