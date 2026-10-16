@@ -256,6 +256,68 @@ class DocumentChunkingTests(unittest.TestCase):
         self.assertEqual("".join(chunk.text for chunk in chunks), text)
         self.assertTrue(all(chunk.token_count <= 25 for chunk in chunks))
 
+    def test_untitled_preamble_is_attached_to_first_section(self) -> None:
+        """A PDF/HTML/TXT-style disclaimer opening joins the first section."""
+        document = make_document(
+            ContentBlock("SYNTHETIC TRAINING CORPUS — fictional company", 0, page=1),
+            ContentBlock(
+                "Refunds are reviewed by Billing Operations.",
+                1,
+                page=2,
+                section="Refunds",
+                heading_path=("Refunds",),
+            ),
+        )
+        chunks = chunk_document(document, ChunkingConfig(overlap_tokens=0))
+        self.assertEqual(len(chunks), 1)
+        self.assertEqual(
+            chunks[0].text,
+            "SYNTHETIC TRAINING CORPUS — fictional company\n\n"
+            "Refunds are reviewed by Billing Operations.",
+        )
+        self.assertEqual(chunks[0].heading_path, ("Refunds",))
+        self.assertEqual(chunks[0].source_block_ids, (0, 1))
+        self.assertEqual((chunks[0].start_page, chunks[0].end_page), (1, 2))
+
+    def test_markdown_title_preamble_is_attached_to_child_section(self) -> None:
+        """An H1 title with a disclaimer joins its first child section."""
+        document = make_document(
+            ContentBlock(
+                "# Refund policy\n\n> SYNTHETIC TRAINING CORPUS",
+                0,
+                section="Refund policy",
+                heading_path=("Refund policy",),
+            ),
+            ContentBlock(
+                "## Scope\n\nApplies to direct-billed plans.",
+                1,
+                section="Scope",
+                heading_path=("Refund policy", "Scope"),
+            ),
+        )
+        chunks = chunk_document(document, ChunkingConfig(overlap_tokens=0))
+        self.assertEqual(len(chunks), 1)
+        self.assertTrue(chunks[0].text.startswith("# Refund policy"))
+        self.assertEqual(chunks[0].heading_path, ("Refund policy", "Scope"))
+
+    def test_preamble_is_not_attached_to_unrelated_or_long_openings(self) -> None:
+        """Sibling sections and long untitled introductions stay separate."""
+        sibling_document = make_document(
+            ContentBlock("Intro.", 0, section="Intro", heading_path=("Intro",)),
+            ContentBlock("Body.", 1, section="Body", heading_path=("Body",)),
+        )
+        long_opening = " ".join(
+            f"Introductory sentence {index} carries real content." for index in range(30)
+        )
+        long_document = make_document(
+            ContentBlock(long_opening, 0),
+            ContentBlock("Body.", 1, section="Body", heading_path=("Body",)),
+        )
+        config = ChunkingConfig(overlap_tokens=0)
+        self.assertEqual(len(chunk_document(sibling_document, config)), 2)
+        long_chunks = chunk_document(long_document, config)
+        self.assertEqual([chunk.heading_path for chunk in long_chunks], [(), ("Body",)])
+
     def test_oversized_case_section_splits_between_complete_cases(self) -> None:
         """Each case keeps its title and body, and no case leaks into another."""
         cases = [
@@ -429,7 +491,7 @@ class ChunkArtifactTests(unittest.TestCase):
         self.assertEqual(first_report["heading_only_chunks"], 0)
         self.assertEqual(
             first_report["chunking_configuration"]["config_version"],
-            "phase4-v3",
+            "phase4-v4",
         )
         self.assertEqual(serialize_chunks(first_chunks), serialize_chunks(second_chunks))
         self.assertEqual(first_report, second_report)

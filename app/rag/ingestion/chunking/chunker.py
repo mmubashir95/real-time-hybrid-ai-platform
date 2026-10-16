@@ -33,7 +33,11 @@ DEFAULT_MAX_TOKENS = 500
 DEFAULT_OVERLAP_TOKENS = 50
 TOKENIZER_NAME = "o200k_base"
 TOKENIZER_VERSION = package_version("tiktoken")
-CHUNKING_CONFIG_VERSION = "phase4-v3"
+CHUNKING_CONFIG_VERSION = "phase4-v4"
+# A document preamble is a title and disclaimer block (17-45 tokens in the
+# corpus). Longer untitled openings are real content and keep their own
+# chunks, so the first section's heading path is never applied to them.
+MAX_PREAMBLE_TOKENS = 100
 SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+")
 # TXT and PDF parsers keep a whole [CASES] section in one paragraph, with each
 # worked case on its own line opened by an ID such as "AST-CAN-CASE-05 — ".
@@ -211,7 +215,53 @@ def _logical_sections(document: ParsedDocument) -> tuple[list[_LogicalSection], 
             )
 
     save_section()
-    return _attach_heading_only_parents(sections), empty_blocks_skipped
+    sections = _attach_heading_only_parents(sections)
+    return _attach_document_preamble(sections), empty_blocks_skipped
+
+
+def _is_strict_descendant(
+    path: tuple[str, ...],
+    ancestor_path: tuple[str, ...],
+) -> bool:
+    """Return whether ``path`` sits below ``ancestor_path`` in the hierarchy."""
+    return (
+        len(path) > len(ancestor_path)
+        and path[: len(ancestor_path)] == ancestor_path
+    )
+
+
+def _join_sections(
+    leading: _LogicalSection,
+    following: _LogicalSection,
+) -> _LogicalSection:
+    """Prepend leading units to a section, keeping the following heading path."""
+    following_units = (
+        replace(following.units[0], separator="\n\n"),
+        *following.units[1:],
+    )
+    return replace(following, units=(*leading.units, *following_units))
+
+
+def _attach_document_preamble(
+    sections: list[_LogicalSection],
+) -> list[_LogicalSection]:
+    """Attach a short title and disclaimer opening to the first section.
+
+    Parsers place a document's title and synthetic-corpus disclaimer before
+    its first heading. On its own that text becomes a near-identical,
+    low-information chunk in every document. The opening is attached only
+    when it is short and sits above the next section in the hierarchy: an
+    empty path (PDF, HTML, TXT) or the document title path (Markdown H1).
+    """
+    if len(sections) < 2:
+        return sections
+    preamble, first_section = sections[0], sections[1]
+    is_short = count_tokens(_render_units(preamble.units)) <= MAX_PREAMBLE_TOKENS
+    if not is_short or not _is_strict_descendant(
+        first_section.heading_path, preamble.heading_path
+    ):
+        return sections
+    return [_join_sections(preamble, first_section), *sections[2:]]
 
 
 def _attach_heading_only_parents(
@@ -229,24 +279,15 @@ def _attach_heading_only_parents(
     for section in sections:
         if combined_sections:
             previous = combined_sections[-1]
-            is_descendant = (
-                len(section.heading_path) > len(previous.heading_path)
-                and section.heading_path[: len(previous.heading_path)]
-                == previous.heading_path
+            is_descendant = _is_strict_descendant(
+                section.heading_path, previous.heading_path
             )
             previous_is_heading_context = all(
                 unit.is_heading_only for unit in previous.units
             )
             if is_descendant and previous_is_heading_context:
                 combined_sections.pop()
-                descendant_units = (
-                    replace(section.units[0], separator="\n\n"),
-                    *section.units[1:],
-                )
-                section = replace(
-                    section,
-                    units=(*previous.units, *descendant_units),
-                )
+                section = _join_sections(previous, section)
         combined_sections.append(section)
     return combined_sections
 
