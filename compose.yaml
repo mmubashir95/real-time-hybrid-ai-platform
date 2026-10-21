@@ -10,8 +10,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD
@@ -23,6 +23,18 @@ services:
       retries: 5
       start_period: 5s
 
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python", "-m", "scripts.migrate_database", "upgrade"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://realtime_ai:local_development_only@postgres:5432/realtime_ai
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   postgres:
     # pgvector 0.8.7, built on the same PostgreSQL 17 Bookworm base image.
     # The digest pins the multi-platform image rather than a host architecture.
@@ -33,8 +45,6 @@ services:
       POSTGRES_PASSWORD: local_development_only
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
-      - ./migrations/001_enable_pgvector.sql:/docker-entrypoint-initdb.d/002-enable-pgvector.sql:ro
     healthcheck:
       test:
         - CMD-SHELL

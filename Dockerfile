@@ -16,6 +16,11 @@ RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu 
 RUN useradd --create-home --uid 10001 appuser
 
 COPY --chown=appuser:appuser app ./app
+# Ship the immutable SQL history and its runner so Compose and deployment jobs
+# execute the same migration path before starting the API.
+COPY --chown=appuser:appuser scripts ./scripts
+COPY --chown=appuser:appuser migrations ./migrations
+COPY --chown=appuser:appuser schema.sql ./schema.sql
 
 USER appuser
 

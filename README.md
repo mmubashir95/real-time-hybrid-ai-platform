@@ -9,14 +9,12 @@ which is the default for a local Homebrew or Postgres.app install.
 ```bash
 pip install -r requirements.txt
 
-# One-time database setup: create the database, enable pgvector, and add the table.
+# One-time database setup: create the database and apply the ordered history.
 createdb realtime_ai
-psql -v ON_ERROR_STOP=1 -d realtime_ai -f migrations/001_enable_pgvector.sql
-psql -d realtime_ai -f schema.sql
-
 export OPENAI_API_KEY=your-key
 export MODEL_TIMEOUT_SECONDS=30  # optional, defaults to 30
 export DATABASE_URL=postgresql+asyncpg://localhost:5432/realtime_ai
+python -m scripts.migrate_database upgrade
 uvicorn app.main:app --reload
 ```
 
@@ -53,12 +51,10 @@ docker compose ps
 docker compose logs -f api
 ```
 
-PostgreSQL must pass `pg_isready` before the API starts. On the first creation of
-the named volume, the PostgreSQL entrypoint applies `schema.sql` and the pgvector
-migration automatically. It does not reapply initialization files to an existing
-volume. For an existing volume, follow
-[`docs/PHASE_6_1_PGVECTOR_SETUP.md`](docs/PHASE_6_1_PGVECTOR_SETUP.md) before
-recreating the PostgreSQL container with the pgvector image.
+PostgreSQL must pass `pg_isready` before the `migrate` service runs. The API starts
+only after the ordered migration history succeeds. Fresh and existing volumes use
+the same path instead of one-time PostgreSQL initialization scripts. See the
+[migration guide](docs/PHASE_6_3_DATABASE_MIGRATIONS.md).
 
 Verify the API and its existing behavior:
 
@@ -86,14 +82,9 @@ docker compose down
 ```
 
 Starting again with `docker compose up -d` reuses the named PostgreSQL volume. Use
-`GET /analyses/{id}` to confirm a previously stored record remains available. To
-delete all local PostgreSQL data and rerun `schema.sql` on the next start:
-
-```bash
-docker compose down -v
-```
-
-The `-v` option permanently removes the Compose database volume.
+`GET /analyses/{id}` to confirm a previously stored record remains available.
+Never use `docker compose down -v` as a migration step; it permanently removes the
+database volume.
 
 The API image can also be built independently:
 
@@ -113,17 +104,21 @@ table stores the submitted message, structured model result, creation time, and
 model-call latency. Entities use PostgreSQL JSONB because they are structured JSON
 and may need to be queried by key later.
 
-The project uses focused, versioned SQL migrations rather than a migration
-framework. [`schema.sql`](schema.sql) remains the reproducible definition of the
-initial application table, while `migrations/001_enable_pgvector.sql` enables the
-database-scoped extension safely on fresh and existing databases. The app does not
-create tables or extensions on startup.
+The project uses focused SQL migrations and a repository-native runner rather than
+a general migration framework. [`schema.sql`](schema.sql) is revision 000,
+`migrations/001_enable_pgvector.sql` enables the database-scoped extension, and
+`migrations/002_create_rag_schema.sql` creates the approved empty RAG schema.
+Successful revisions and checksums are recorded in `schema_migrations`; Compose
+runs pending migrations before the API starts. Embedding import remains Task 6.4.
 
-Phase 6.2 adds an explicit migration for the RAG document/version/chunk/embedding
-schema. It is not applied automatically by Compose. Follow the
-[schema guide](docs/PHASE_6_2_RAG_DATABASE_SCHEMA.md) to apply
-`migrations/002_create_rag_schema.sql` yourself, inspect its output, and run the
-isolated database tests. It creates empty tables; embedding import is Task 6.3.
+```bash
+python -m scripts.migrate_database history
+python -m scripts.migrate_database status
+python -m scripts.migrate_database upgrade
+```
+
+See the [Phase 6.3 migration guide](docs/PHASE_6_3_DATABASE_MIGRATIONS.md) for
+backup, verification, integration-test, and recovery procedures.
 
 Both `OPENAI_API_KEY` and `DATABASE_URL` are required; startup imports remain safe,
 and requests fail with controlled service-unavailable responses when storage is not
@@ -133,7 +128,8 @@ configured or available.
 is temporarily unavailable", check the server log:
 
 - `error_type=UndefinedTableError`: the database exists but `schema.sql` was not
-  applied. Run `psql -d realtime_ai -f schema.sql`.
+  applied. Run `python -m scripts.migrate_database upgrade` with `DATABASE_URL`
+  set to that database.
 - `error_type=OSError`: PostgreSQL is not running or `DATABASE_URL` points at the
   wrong host or port.
 - `error_type=InvalidCatalogNameError`: the database does not exist. Run
@@ -141,8 +137,8 @@ is temporarily unavailable", check the server log:
 
 ### Manual verification
 
-Start PostgreSQL, apply `schema.sql`, export the environment variables above, and
-start FastAPI. Submit a message with response headers included:
+Start PostgreSQL, run the migration upgrade, export the environment variables
+above, and start FastAPI. Submit a message with response headers included:
 
 ```bash
 curl -i -X POST http://127.0.0.1:8000/analyze \

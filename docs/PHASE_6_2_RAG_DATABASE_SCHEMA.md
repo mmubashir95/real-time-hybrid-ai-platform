@@ -118,7 +118,7 @@ Compute the chunking configuration fingerprint as the lowercase SHA-256 of UTF-8
 `chunking_configuration` object in `chunking_report.json`. This includes token
 budgets, overlap, tokenizer identity, and algorithm version. This field is a new
 database identity derived from existing metadata, not an existing Phase 4 field.
-Task 6.3 must verify that it agrees with the stored configuration and per-chunk
+Task 6.4 must verify that it agrees with the stored configuration and per-chunk
 tokenizer/version fields before insertion. SQL checks its shape, not its hash.
 
 ### chunk_embeddings
@@ -169,7 +169,7 @@ The new database `embedding_config_fingerprint` is the lowercase SHA-256 of
 UTF-8 `json.dumps(fields, ensure_ascii=False, sort_keys=True, separators=(",", ":"))`.
 The existing Phase 5 `input_fingerprint` already hashes the exact prepared text
 and those encoding fields, prefixed by `emb_`; preserve it without recomputation
-under a different convention. The database checks fingerprint formats; Task 6.3
+under a different convention. The database checks fingerprint formats; Task 6.4
 must check agreement with the actual source text and configuration.
 
 `query_instruction` is retained separately from the document-vector fingerprint,
@@ -192,7 +192,7 @@ indexes, HNSW indexes, or IVFFlat indexes are added.
 Tenant identity resolves through `documents`. Do not duplicate mutable lifecycle
 or visibility snapshots on child rows. FKs preserve valid parent links but cannot
 authorize the user's access or prove an imported chunk belongs to the claimed
-source. Task 6.3 must validate the full tenant/document/version chain against the
+source. Task 6.4 must validate the full tenant/document/version chain against the
 artifacts, and future requests must use trusted server-side tenant identity. This
 schema does not introduce RLS, authentication, or general tenancy administration.
 
@@ -223,7 +223,13 @@ schema does not introduce RLS, authentication, or general tenancy administration
 | vectors.npy at metadata row_index | chunk_embeddings.embedding |
 | row_index, run pointer, artifact checksums | Import alignment/validation; not source identity columns |
 
-## Apply the migration yourself
+## Historical direct SQL application
+
+Phase 6.3 supersedes this direct deployment path with the ordered runner documented
+in [`PHASE_6_3_DATABASE_MIGRATIONS.md`](PHASE_6_3_DATABASE_MIGRATIONS.md). The
+commands below remain useful for reviewing revision 002 in isolation, but normal
+fresh and existing database upgrades must use
+`python -m scripts.migrate_database upgrade` so all revisions are recorded.
 
 Prerequisites: PostgreSQL 17, pgvector enabled in `public` in the exact target
 database, database-owner/appropriate DDL privileges, and the repository root as
@@ -322,10 +328,10 @@ analyses while the RAG tables remain in place. If SQL fails, its transaction
 already rolls back. If a successful deployment needs correction, use a new forward
 migration; do not delete a populated RAG schema or its ledger to force reapplication.
 
-ORM mappings are deferred until Task 6.3 has a real persistence caller. No extra
+ORM mappings are deferred until Task 6.4 has a real persistence caller. No extra
 pgvector Python dependency or duplicate SQLAlchemy metadata is introduced here.
 
-Task 6.3 must load and validate the published artifact checksums, source manifest,
+Task 6.4 must load and validate the published artifact checksums, source manifest,
 chunk contract, row alignment, vector values, configuration/input fingerprints,
 and parent ownership chain. It must implement transactional, idempotent ingestion
 with explicit conflict handling. Database FK checks alone cannot verify artifact

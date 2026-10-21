@@ -143,8 +143,8 @@ docker compose logs -f api
 ```
 
 The API is available at `http://127.0.0.1:8000`. PostgreSQL must pass its health
-check before the API starts. On first volume creation, the PostgreSQL image runs
-`schema.sql` automatically.
+check before the `migrate` service applies pending revisions; the API starts only
+after migration succeeds.
 
 Stop the services while retaining database records:
 
@@ -152,11 +152,8 @@ Stop the services while retaining database records:
 docker compose down
 ```
 
-To permanently delete the local Compose database volume:
-
-```bash
-docker compose down -v
-```
+Never use `docker compose down -v` as a migration step because it permanently
+deletes the local database volume.
 
 ### Direct local execution
 
@@ -167,10 +164,10 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 createdb realtime_ai
-psql -d realtime_ai -f schema.sql
 export OPENAI_API_KEY=your-key
 export MODEL_TIMEOUT_SECONDS=30
 export DATABASE_URL=postgresql+asyncpg://localhost:5432/realtime_ai
+python -m scripts.migrate_database upgrade
 uvicorn app.main:app --reload
 ```
 
@@ -267,14 +264,12 @@ The `analyses` table stores:
 - Creation time with timezone
 - Non-negative model-call latency in milliseconds
 
-The repository uses `schema.sql` for its initial application table and focused,
-versioned SQL files under `migrations/` for later database changes. New Compose
-volumes apply the initial table and pgvector migration during initialization.
-The Phase 6.2 RAG schema migration is deliberately manual, including on fresh
-databases. Existing databases must run each new migration explicitly; changing
-an initialization file alone does not update an
-existing database. Phase 6.1 setup and rollback steps are documented in
-[`PHASE_6_1_PGVECTOR_SETUP.md`](PHASE_6_1_PGVECTOR_SETUP.md).
+The repository uses `schema.sql` as revision 000 and focused SQL files under
+`migrations/` for later changes. `scripts/migrate_database.py` records ordered
+revisions and checksums, and Compose runs it before starting the API. Fresh and
+existing databases therefore use the same upgrade path. See
+[`PHASE_6_3_DATABASE_MIGRATIONS.md`](PHASE_6_3_DATABASE_MIGRATIONS.md) for backup,
+status, testing, and recovery commands.
 
 The approved RAG storage contract separates `documents`, `document_versions`,
 `document_chunks`, and `chunk_embeddings`. It retains tenant-scoped identities,

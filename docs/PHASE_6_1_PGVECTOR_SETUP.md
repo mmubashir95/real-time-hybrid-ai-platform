@@ -62,15 +62,13 @@ docker stop realtime-ai-pgvector-validation
 Remove only that explicitly named disposable validation volume after confirming
 its identity. Do not remove the project volume.
 
-Then recreate only the database container and apply the migration to the already
-initialized application database:
+Then recreate only the database container and run the ordered migration service
+against the already initialized application database:
 
 ```bash
 docker compose pull postgres
 docker compose up -d --no-deps postgres
-docker compose exec -T postgres psql -v ON_ERROR_STOP=1 \
-  -U realtime_ai -d realtime_ai \
-  -f /docker-entrypoint-initdb.d/002-enable-pgvector.sql
+docker compose run --rm migrate python -m scripts.migrate_database upgrade
 ```
 
 The migration rejects non-PostgreSQL-17 servers and reports an actionable error
@@ -152,11 +150,11 @@ pgvector validation.
   by the connection URL; enabling it in another database has no effect.
 - `expected 384 dimensions`: the inserted embedding length does not match the
   declared model dimension.
-- Existing volumes do not run init scripts again. Apply the migration explicitly
-  with `psql` rather than restarting repeatedly.
+- Existing volumes do not run init scripts again. Use the ordered migration runner
+  rather than restarting PostgreSQL repeatedly.
 
 ## Remaining Phase 6 work
 
-Task 6.2 will design the production RAG schema. Later tasks will import the 806
-validated embeddings, implement retrieval, and add indexes as justified. None of
-those features is part of this infrastructure change.
+Task 6.2 added the production RAG schema, and Task 6.3 added ordered migration
+tracking. Task 6.4 will import the validated embeddings. Retrieval and indexes
+remain later work and are not part of this infrastructure change.
