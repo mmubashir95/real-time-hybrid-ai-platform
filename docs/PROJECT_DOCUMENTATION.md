@@ -389,4 +389,6 @@ history before sending the archive outside a trusted environment.
 - `docs/Month_2_Production_RAG_Pretrained_and_FineTuned_Implementation_Roadmap.md`
 - `docs/Real_Time_Applied_AI_Systems_6_Month_Roadmap.md`
 - `data/rag/README.md` — corpus contents, restrictions, and practice workflow
+- `docs/PHASE_5_PRODUCTION_EMBEDDINGS.md` — pinned local embedding pipeline,
+  artifacts, tests, and semantic experiment
 

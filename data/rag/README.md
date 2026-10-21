@@ -72,6 +72,14 @@ visual layouts; Markdown recognition is limited to ATX (`#`) headings.
 
 **Session 3: Seed evaluation**. Review 15 questions against the **source** before search exists. Label exact document/version/section spans, no-answer and historical cases. Freeze these labels before retrieval experiments. Build retrieval only after this checkpoint.
 
+## Phase 5 local embeddings
+
+The production-oriented local embedding pipeline consumes the generated Phase
+4 `data/rag/processed/chunks.jsonl` artifact without rerunning or changing
+ingestion. See `docs/PHASE_5_PRODUCTION_EMBEDDINGS.md` for the pinned model and
+revision, tokenizer compatibility preflight, artifact contract, commands,
+tests, and scoped semantic experiment.
+
 ## Experiment setup
 
 - Begin with 3–5 documents and expand to both tenants after ingestion and indexing are reliable.

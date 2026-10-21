@@ -18,3 +18,7 @@ PyMuPDF==1.26.5
 
 # Model-compatible token counting for RAG document chunking
 tiktoken==0.12.0
+
+# Local Phase 5 embedding inference and compact numerical artifacts
+sentence-transformers==5.1.1
+numpy==2.3.4
