@@ -1,4 +1,4 @@
-"""Real PostgreSQL checks for schema.sql and the analysis repository.
+"""Real PostgreSQL checks for schema, pgvector, and the analysis repository.
 
 Skipped unless TEST_DATABASE_URL points at a disposable database, for example:
 
@@ -15,6 +15,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from sqlalchemy import inspect, text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 
 from app.database import DatabaseError
@@ -24,6 +25,12 @@ from app.schemas import AnalysisResult
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "")
 SCHEMA_SQL = (Path(__file__).resolve().parent.parent / "schema.sql").read_text()
+PGVECTOR_MIGRATION_SQL = (
+    Path(__file__).resolve().parent.parent
+    / "migrations"
+    / "001_enable_pgvector.sql"
+).read_text()
+PGVECTOR_MIGRATION_STATEMENTS = PGVECTOR_MIGRATION_SQL.rsplit("\n\n", maxsplit=1)
 
 
 @unittest.skipUnless(TEST_DATABASE_URL, "TEST_DATABASE_URL is not set")
@@ -65,6 +72,120 @@ class PostgresIntegrationTests(unittest.IsolatedAsyncioTestCase):
         async with engine.begin() as connection:
             await connection.exec_driver_sql(SCHEMA_SQL)
         return engine
+
+    async def _enable_pgvector(self) -> None:
+        """Apply the database-scoped pgvector migration to the test database."""
+        async with self.admin_engine.begin() as connection:
+            # asyncpg prepares one statement at a time; psql executes the same
+            # migration file as a script in normal setup and Compose initialization.
+            for statement in PGVECTOR_MIGRATION_STATEMENTS:
+                await connection.exec_driver_sql(statement)
+
+    async def test_pgvector_extension_is_enabled_and_migration_is_repeatable(
+        self,
+    ) -> None:
+        """Expose the installed extension version after two safe migration runs."""
+        await self._enable_pgvector()
+        await self._enable_pgvector()
+
+        async with self.admin_engine.connect() as connection:
+            extension = (
+                await connection.execute(
+                    text(
+                        "SELECT extname, extversion FROM pg_extension "
+                        "WHERE extname = 'vector'"
+                    )
+                )
+            ).one()
+
+        self.assertEqual(extension.extname, "vector")
+        self.assertRegex(extension.extversion, r"^\d+\.\d+")
+
+    async def test_pgvector_supports_384_dimensions_and_round_trip(self) -> None:
+        """Store and read one model-sized vector without changing its values."""
+        await self._enable_pgvector()
+        vector = "[" + ",".join(["0"] * 383 + ["1"]) + "]"
+
+        async with self.admin_engine.begin() as connection:
+            await connection.execute(
+                text(
+                    "CREATE TEMP TABLE vector_384_test "
+                    "(id INTEGER PRIMARY KEY, embedding vector(384) NOT NULL)"
+                )
+            )
+            await connection.execute(
+                text(
+                    "INSERT INTO vector_384_test (id, embedding) "
+                    "VALUES (1, CAST(:embedding AS vector))"
+                ),
+                {"embedding": vector},
+            )
+            stored = (
+                await connection.execute(
+                    text(
+                        "SELECT vector_dims(embedding) AS dimensions, "
+                        "embedding::text AS embedding FROM vector_384_test WHERE id = 1"
+                    )
+                )
+            ).one()
+
+        self.assertEqual(stored.dimensions, 384)
+        self.assertEqual(stored.embedding, vector)
+
+    async def test_pgvector_cosine_similarity_ranking(self) -> None:
+        """Rank three known vectors by cosine similarity with stable tolerance."""
+        await self._enable_pgvector()
+
+        async with self.admin_engine.begin() as connection:
+            await connection.execute(
+                text(
+                    "CREATE TEMP TABLE vector_cosine_test "
+                    "(id INTEGER PRIMARY KEY, embedding vector(3) NOT NULL)"
+                )
+            )
+            await connection.execute(
+                text(
+                    "INSERT INTO vector_cosine_test (id, embedding) VALUES "
+                    "(1, '[1,0,0]'), (2, '[0.9,0.1,0]'), (3, '[0,1,0]')"
+                )
+            )
+            rows = (
+                await connection.execute(
+                    text(
+                        "SELECT id, 1 - (embedding <=> '[1,0,0]'::vector) "
+                        "AS similarity FROM vector_cosine_test "
+                        "ORDER BY embedding <=> '[1,0,0]'::vector LIMIT 3"
+                    )
+                )
+            ).all()
+
+        self.assertEqual([row.id for row in rows], [1, 2, 3])
+        self.assertAlmostEqual(rows[0].similarity, 1.0)
+        self.assertAlmostEqual(rows[1].similarity, 0.9938837347, places=7)
+        self.assertAlmostEqual(rows[2].similarity, 0.0)
+
+    async def test_pgvector_rejects_incorrect_dimensions(self) -> None:
+        """Reject a three-value vector assigned to a vector(384) column."""
+        await self._enable_pgvector()
+
+        async with self.admin_engine.connect() as connection:
+            transaction = await connection.begin()
+            try:
+                await connection.execute(
+                    text(
+                        "CREATE TEMP TABLE vector_dimension_test "
+                        "(embedding vector(384) NOT NULL)"
+                    )
+                )
+                with self.assertRaisesRegex(DBAPIError, "expected 384 dimensions"):
+                    await connection.execute(
+                        text(
+                            "INSERT INTO vector_dimension_test (embedding) "
+                            "VALUES ('[1,2,3]')"
+                        )
+                    )
+            finally:
+                await transaction.rollback()
 
     async def test_saved_analysis_round_trips_through_postgres(self) -> None:
         sessions = async_sessionmaker(

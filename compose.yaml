@@ -24,7 +24,9 @@ services:
       start_period: 5s
 
   postgres:
-    image: postgres:17-bookworm
+    # pgvector 0.8.7, built on the same PostgreSQL 17 Bookworm base image.
+    # The digest pins the multi-platform image rather than a host architecture.
+    image: pgvector/pgvector:0.8.7-pg17-bookworm@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
     environment:
       POSTGRES_DB: realtime_ai
       POSTGRES_USER: realtime_ai
@@ -32,6 +34,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+      - ./migrations/001_enable_pgvector.sql:/docker-entrypoint-initdb.d/002-enable-pgvector.sql:ro
     healthcheck:
       test:
         - CMD-SHELL

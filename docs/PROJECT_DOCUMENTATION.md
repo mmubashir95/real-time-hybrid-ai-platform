@@ -267,10 +267,12 @@ The `analyses` table stores:
 - Creation time with timezone
 - Non-negative model-call latency in milliseconds
 
-The repository currently uses `schema.sql` rather than a migration framework.
-The schema must therefore be applied once to each new database. Changing the
-schema in a long-lived environment should be handled deliberately; editing
-`schema.sql` alone does not update an existing database.
+The repository uses `schema.sql` for its initial application table and focused,
+versioned SQL files under `migrations/` for later database changes. New Compose
+volumes apply both during initialization. Existing databases must run each new
+migration explicitly; changing an initialization file alone does not update an
+existing database. Phase 6.1 setup and rollback steps are documented in
+[`PHASE_6_1_PGVECTOR_SETUP.md`](PHASE_6_1_PGVECTOR_SETUP.md).
 
 ## 9. RAG ingestion workspace
 

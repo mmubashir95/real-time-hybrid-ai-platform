@@ -9,8 +9,9 @@ which is the default for a local Homebrew or Postgres.app install.
 ```bash
 pip install -r requirements.txt
 
-# One-time database setup: create the database AND its table.
+# One-time database setup: create the database, enable pgvector, and add the table.
 createdb realtime_ai
+psql -v ON_ERROR_STOP=1 -d realtime_ai -f migrations/001_enable_pgvector.sql
 psql -d realtime_ai -f schema.sql
 
 export OPENAI_API_KEY=your-key
@@ -53,8 +54,11 @@ docker compose logs -f api
 ```
 
 PostgreSQL must pass `pg_isready` before the API starts. On the first creation of
-the named volume, the official PostgreSQL entrypoint applies `schema.sql`
-automatically. It does not reapply initialization files to an existing volume.
+the named volume, the PostgreSQL entrypoint applies `schema.sql` and the pgvector
+migration automatically. It does not reapply initialization files to an existing
+volume. For an existing volume, follow
+[`docs/PHASE_6_1_PGVECTOR_SETUP.md`](docs/PHASE_6_1_PGVECTOR_SETUP.md) before
+recreating the PostgreSQL container with the pgvector image.
 
 Verify the API and its existing behavior:
 
@@ -109,9 +113,11 @@ table stores the submitted message, structured model result, creation time, and
 model-call latency. Entities use PostgreSQL JSONB because they are structured JSON
 and may need to be queried by key later.
 
-This project does not yet have a migration system. For this single initial table,
-[`schema.sql`](schema.sql) is the reproducible schema definition and must be applied
-once per database (see "Run locally"). The app does not create tables on startup.
+The project uses focused, versioned SQL migrations rather than a migration
+framework. [`schema.sql`](schema.sql) remains the reproducible definition of the
+initial application table, while `migrations/001_enable_pgvector.sql` enables the
+database-scoped extension safely on fresh and existing databases. The app does not
+create tables or extensions on startup.
 
 Both `OPENAI_API_KEY` and `DATABASE_URL` are required; startup imports remain safe,
 and requests fail with controlled service-unavailable responses when storage is not
