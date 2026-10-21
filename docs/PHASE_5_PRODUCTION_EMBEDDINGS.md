@@ -117,6 +117,20 @@ the matrix and metadata before atomically renaming the complete run and then
 publishing `latest.json`. A failed attempt cannot overwrite a prior immutable
 run or advertise an incomplete new run.
 
+The run identity hashes the chunk artifact bytes, every vector-affecting
+setting (model, revision, document instruction, normalization, encoding
+version), and the artifact format version, so it is known before inference.
+Re-running the CLI with an identical contract validates and reuses the existing
+run instead of re-encoding, and re-points `latest.json`; this also recovers a
+run whose pointer publication failed.
+
+`report.json` records `artifact_format_version` and SHA-256 checksums of
+`vectors.npy` and `metadata.jsonl`. Loading rejects checksum mismatches (for
+example swapped rows), an unknown format version, a missing normalization flag,
+and any row whose model ID, revision, or dimensions differ from the report.
+Runs written before format version 2 carry no checksums and are not loadable;
+they are left in place and regenerated under a new run directory.
+
 Inspect one vector without loading the model:
 
 ```bash
@@ -132,11 +146,14 @@ Use an existing evaluation question rather than inventing a new benchmark:
 ```
 
 The experiment encodes the query with the query instruction and computes cosine
-similarity in memory. Candidates are restricted to the question's trusted
-tenant, gold document, and gold version. When callers do not explicitly select
-a version, the reusable experiment function excludes archived records. Results
-show score, chunk ID, document ID, version, section, and a section-anchor match.
-A section match is only a coarse check, not proof that the exact gold span was
+similarity in memory. Candidates are every active document in the question's
+tenant; only explicitly historical (`version_conflict`) questions select their
+archived gold document and version, using the same scope rule as the recall
+evaluation. A version filter is accepted only together with a document ID, so
+archived rows can never be unlocked across documents. The tenant comes from the
+evaluation file: it is test scoping, not authenticated authorization. Results
+show score, chunk ID, document ID, version, section, and a gold-anchor match
+(document + version + section). An anchor match is only a coarse check, not proof that the exact gold span was
 retrieved. Similarities are ranking signals, not calibrated correctness
 probabilities. The synthetic labels still require human review, so a few good
 examples do not establish retrieval quality.

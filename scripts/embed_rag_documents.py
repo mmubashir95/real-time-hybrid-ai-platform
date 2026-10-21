@@ -31,8 +31,12 @@ from app.rag.embeddings.models import (  # noqa: E402
     DEFAULT_MODEL_REVISION,
 )
 from app.rag.embeddings.service import (  # noqa: E402
+    embedding_run_directory,
     evaluate_recall,
     load_evaluation_question,
+    load_reusable_run,
+    publish_latest_pointer,
+    question_search_scope,
 )
 
 
@@ -134,6 +138,36 @@ def print_compatibility(
     return lengths
 
 
+def _generate_and_publish(
+    chunks: tuple[Any, ...],
+    encoder: SentenceTransformerEncoder,
+    corpus_sha256: str,
+    output_directory: Path,
+    config: EmbeddingConfig,
+    output: TextIO,
+) -> tuple[Any, tuple[Any, ...]]:
+    """Encode every chunk, publish the run, print measurements, return rows."""
+    result = generate_embeddings(chunks, encoder, corpus_sha256)
+    vectors_path, metadata_path, report_path = write_embedding_artifacts(
+        output_directory, result, config
+    )
+    throughput = (
+        len(chunks) / result.encoding_seconds if result.encoding_seconds else 0.0
+    )
+    print("\nOUTPUT", file=output)
+    print(f"  Generated vectors: {len(result.records)}", file=output)
+    print("  Failed vectors: 0", file=output)
+    print("  Invalid vectors: 0", file=output)
+    print(f"  Vectors: {vectors_path}", file=output)
+    print(f"  Metadata: {metadata_path}", file=output)
+    print(f"  Report: {report_path}", file=output)
+    print("\nPERFORMANCE", file=output)
+    print(f"  Model loading duration: {result.model_load_seconds:.3f}s", file=output)
+    print(f"  Encoding duration: {result.encoding_seconds:.3f}s", file=output)
+    print(f"  Chunks per second: {throughput:.2f}", file=output)
+    return result.vectors, result.records
+
+
 def main(
     arguments: list[str] | None = None,
     output: TextIO | None = None,
@@ -160,50 +194,52 @@ def main(
             print("\nFINAL STATUS: PASSED (COMPATIBILITY ONLY)", file=output)
             return 0
 
-        result = generate_embeddings(chunks, encoder, corpus_sha256)
-        vectors_path, metadata_path, report_path = write_embedding_artifacts(
-            args.output_directory, result, config
+        run_directory = embedding_run_directory(
+            args.output_directory, corpus_sha256, config
         )
-        throughput = (
-            len(chunks) / result.encoding_seconds
-            if result.encoding_seconds
-            else 0.0
-        )
-        print("\nOUTPUT", file=output)
-        print(f"  Generated vectors: {len(result.records)}", file=output)
-        print("  Failed vectors: 0", file=output)
-        print("  Invalid vectors: 0", file=output)
-        print(f"  Vectors: {vectors_path}", file=output)
-        print(f"  Metadata: {metadata_path}", file=output)
-        print(f"  Report: {report_path}", file=output)
-        print("\nPERFORMANCE", file=output)
-        print(
-            f"  Model loading duration: {result.model_load_seconds:.3f}s",
-            file=output,
-        )
-        print(f"  Encoding duration: {result.encoding_seconds:.3f}s", file=output)
-        print(f"  Chunks per second: {throughput:.2f}", file=output)
+        # The run identity is known before inference, so an identical run is
+        # validated and reused instead of re-encoding and failing to publish.
+        # Reuse also repairs latest.json if a previous publication failed late.
+        if run_directory.exists():
+            vectors, records, _ = load_reusable_run(
+                run_directory, corpus_sha256, config
+            )
+            publish_latest_pointer(args.output_directory, run_directory)
+            print("\nOUTPUT", file=output)
+            print(f"  Reused validated run: {run_directory}", file=output)
+            print(f"  Vectors: {len(records)}", file=output)
+        else:
+            vectors, records = _generate_and_publish(
+                chunks, encoder, corpus_sha256, args.output_directory, config, output
+            )
 
         if args.question_id:
             question = load_evaluation_question(args.evaluation_file, args.question_id)
+            document_id, document_version = question_search_scope(question)
             ranked = run_semantic_experiment(
                 question["query"],
                 question["tenant_id"],
                 encoder,
-                result.vectors,
-                result.records,
+                vectors,
+                records,
                 top_k=args.top_k,
-                document_id=question["gold_document_id"],
-                document_version=question["gold_version"],
+                document_id=document_id,
+                document_version=document_version,
             )
+            scope = "gold document/version" if document_id else "all active tenant documents"
             print(f"\nSEMANTIC EXPERIMENT: {args.question_id}", file=output)
+            print(f"  Search scope: {question['tenant_id']}, {scope}", file=output)
             for rank, item in enumerate(ranked, start=1):
-                section_match = question["gold_section_key"] in item["section"]
+                gold_match = (
+                    item["document_id"] == question["gold_document_id"]
+                    and item["document_version"] == question["gold_version"]
+                    and question["gold_section_key"] in item["section"]
+                )
                 print(
                     f"  {rank}. score={item['score']:.4f} "
                     f"chunk={item['chunk_id']} document={item['document_id']} "
                     f"version={item['document_version']} section={item['section']} "
-                    f"gold_section_match={section_match}",
+                    f"gold_anchor_match={gold_match}",
                     file=output,
                 )
         if args.evaluate_split:
@@ -211,8 +247,8 @@ def main(
                 args.evaluation_file,
                 args.evaluate_split,
                 encoder,
-                result.vectors,
-                result.records,
+                vectors,
+                records,
             )
             print(f"\nEVALUATION: {args.evaluate_split}", file=output)
             print(
@@ -229,7 +265,7 @@ def main(
             print(f"  Match level: {metrics['match_level']}", file=output)
         print("\nFINAL STATUS: PASSED", file=output)
         return 0
-    except (FileNotFoundError, FileExistsError, RuntimeError, ValueError) as error:
+    except (OSError, RuntimeError, ValueError) as error:
         print(f"Embedding generation failed: {error}", file=error_output)
         print("\nFINAL STATUS: FAILED", file=output)
         return 1

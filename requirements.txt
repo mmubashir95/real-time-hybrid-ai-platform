@@ -21,4 +21,6 @@ tiktoken==0.12.0
 
 # Local Phase 5 embedding inference and compact numerical artifacts
 sentence-transformers==5.1.1
+# Pinned explicitly because it is the largest transitive inference dependency.
+torch==2.14.1
 numpy==2.3.4

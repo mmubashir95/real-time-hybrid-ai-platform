@@ -22,12 +22,29 @@ from typing import Any, Protocol
 import numpy as np
 
 from app.rag.embeddings.models import (
+    ARTIFACT_FORMAT_VERSION,
     EmbeddingConfig,
     EmbeddingRecord,
     GenerationResult,
     TokenLength,
 )
 from app.rag.ingestion.models import DocumentChunk
+
+
+VECTORS_FILE = "vectors.npy"
+METADATA_FILE = "metadata.jsonl"
+REPORT_FILE = "report.json"
+LATEST_POINTER_FILE = "latest.json"
+
+# DocumentChunk is not runtime type-checked, so the JSONL boundary enforces it.
+_CHUNK_STRING_FIELDS = (
+    "chunk_id", "document_id", "document_version", "tenant_id",
+    "document_status", "effective_date", "text", "source_file", "source_type",
+    "tokenizer_name", "tokenizer_version", "chunking_config_version",
+    "access_scope",
+)
+_CHUNK_INTEGER_FIELDS = ("chunk_index", "token_count")
+_CHUNK_OPTIONAL_INTEGER_FIELDS = ("start_page", "end_page")
 
 
 class EmbeddingEncoder(Protocol):
@@ -68,6 +85,7 @@ def load_chunks(path: Path) -> tuple[tuple[DocumentChunk, ...], str]:
             ) from error
         if not isinstance(record, dict) or set(record) != expected_fields:
             raise ValueError(f"Invalid chunk schema on line {line_number}")
+        _validate_chunk_field_types(record, line_number)
         record["heading_path"] = tuple(record["heading_path"])
         record["source_block_ids"] = tuple(record["source_block_ids"])
         try:
@@ -85,6 +103,37 @@ def load_chunks(path: Path) -> tuple[tuple[DocumentChunk, ...], str]:
         seen_ids.add(chunk.chunk_id)
         chunks.append(chunk)
     return tuple(chunks), hashlib.sha256(content).hexdigest()
+
+
+def _is_integer(value: Any) -> bool:
+    """Return whether a JSON value is an integer and not a boolean."""
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _validate_chunk_field_types(record: dict[str, Any], line_number: int) -> None:
+    """Reject chunk records whose JSON types violate the Phase 4 contract."""
+    invalid = [
+        name for name in _CHUNK_STRING_FIELDS if not isinstance(record[name], str)
+    ]
+    invalid += [
+        name for name in _CHUNK_INTEGER_FIELDS if not _is_integer(record[name])
+    ]
+    invalid += [
+        name for name in _CHUNK_OPTIONAL_INTEGER_FIELDS
+        if record[name] is not None and not _is_integer(record[name])
+    ]
+    if not isinstance(record["heading_path"], list) or not all(
+        isinstance(heading, str) for heading in record["heading_path"]
+    ):
+        invalid.append("heading_path")
+    if not isinstance(record["source_block_ids"], list) or not all(
+        _is_integer(block_id) for block_id in record["source_block_ids"]
+    ):
+        invalid.append("source_block_ids")
+    if invalid:
+        raise ValueError(
+            f"Invalid chunk field types on line {line_number}: {', '.join(invalid)}"
+        )
 
 
 def embedding_input_fingerprint(
@@ -280,8 +329,9 @@ def _metadata_bytes(records: Sequence[EmbeddingRecord]) -> bytes:
 def build_generation_report(
     result: GenerationResult,
     config: EmbeddingConfig,
+    artifact_sha256: dict[str, str],
 ) -> dict[str, Any]:
-    """Build a measured report for persistence and CLI presentation."""
+    """Build a measured report, including checksums of the row-aligned files."""
     counts = [item.embedding_tokens for item in result.token_lengths]
     total_seconds = result.model_load_seconds + result.encoding_seconds
     throughput = (
@@ -291,6 +341,8 @@ def build_generation_report(
     )
     return {
         "final_status": "PASSED",
+        "artifact_format_version": ARTIFACT_FORMAT_VERSION,
+        "artifact_sha256": dict(artifact_sha256),
         "input": {
             "chunks": len(result.records),
             "corpus_sha256": result.corpus_sha256,
@@ -328,6 +380,38 @@ def build_generation_report(
     }
 
 
+def embedding_run_directory(
+    output_directory: Path,
+    corpus_sha256: str,
+    config: EmbeddingConfig,
+) -> Path:
+    """Return the deterministic immutable run path for one corpus/model contract.
+
+    The identity covers the exact chunk artifact bytes, every vector-affecting
+    setting, and the artifact format, so it can be computed before inference.
+    """
+    identity = {
+        "artifact_format_version": ARTIFACT_FORMAT_VERSION,
+        "corpus_sha256": corpus_sha256,
+        "encoding": config.fingerprint_fields(),
+    }
+    canonical = json.dumps(identity, sort_keys=True, separators=(",", ":"))
+    run_identity = hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+    return output_directory / f"run-{run_identity}"
+
+
+def _file_sha256(path: Path) -> str:
+    """Return the SHA-256 digest of one persisted artifact file."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def publish_latest_pointer(output_directory: Path, run_directory: Path) -> None:
+    """Atomically point latest.json at an already validated run directory."""
+    latest_stage = output_directory / f".{LATEST_POINTER_FILE}.tmp"
+    latest_stage.write_bytes(_json_bytes({"run_directory": run_directory.name}))
+    latest_stage.replace(output_directory / LATEST_POINTER_FILE)
+
+
 def write_embedding_artifacts(
     output_directory: Path,
     result: GenerationResult,
@@ -336,28 +420,30 @@ def write_embedding_artifacts(
     """Stage, round-trip validate, then atomically publish one immutable run."""
     if len(result.records) != len(result.vectors):
         raise ValueError("Vector and metadata row counts do not match")
-    run_identity_text = (
-        f"{result.corpus_sha256}:{config.model_id}:{config.model_revision}:"
-        f"{config.encoding_config_version}"
-    )
-    run_identity = hashlib.sha256(run_identity_text.encode("utf-8")).hexdigest()[:16]
     output_directory.mkdir(parents=True, exist_ok=True)
-    run_directory = output_directory / f"run-{run_identity}"
+    run_directory = embedding_run_directory(
+        output_directory, result.corpus_sha256, config
+    )
     if run_directory.exists():
         raise FileExistsError(
             f"Immutable embedding run already exists: {run_directory}"
         )
     stage = Path(tempfile.mkdtemp(prefix=".embedding-run-", dir=output_directory))
     try:
-        vectors_path = stage / "vectors.npy"
-        metadata_path = stage / "metadata.jsonl"
-        report_path = stage / "report.json"
+        vectors_path = stage / VECTORS_FILE
+        metadata_path = stage / METADATA_FILE
         with vectors_path.open("wb") as vector_file:
             np.save(vector_file, result.vectors, allow_pickle=False)
             vector_file.flush()
             os.fsync(vector_file.fileno())
         metadata_path.write_bytes(_metadata_bytes(result.records))
-        report_path.write_bytes(_json_bytes(build_generation_report(result, config)))
+        checksums = {
+            VECTORS_FILE: _file_sha256(vectors_path),
+            METADATA_FILE: _file_sha256(metadata_path),
+        }
+        (stage / REPORT_FILE).write_bytes(
+            _json_bytes(build_generation_report(result, config, checksums))
+        )
         # A read-after-write check prevents publication of misaligned artifacts.
         loaded_vectors, loaded_records, _ = load_embedding_artifacts(stage)
         if not np.array_equal(loaded_vectors, result.vectors):
@@ -367,13 +453,11 @@ def write_embedding_artifacts(
         stage.replace(run_directory)
         stage = run_directory
 
-        latest_stage = output_directory / ".latest.json.tmp"
-        latest_stage.write_bytes(_json_bytes({"run_directory": run_directory.name}))
-        latest_stage.replace(output_directory / "latest.json")
+        publish_latest_pointer(output_directory, run_directory)
         return (
-            run_directory / "vectors.npy",
-            run_directory / "metadata.jsonl",
-            run_directory / "report.json",
+            run_directory / VECTORS_FILE,
+            run_directory / METADATA_FILE,
+            run_directory / REPORT_FILE,
         )
     finally:
         if stage.exists() and stage != run_directory:
@@ -383,11 +467,41 @@ def write_embedding_artifacts(
 def load_embedding_artifacts(
     run_directory: Path,
 ) -> tuple[np.ndarray, tuple[EmbeddingRecord, ...], dict[str, Any]]:
-    """Load and validate a published or staged embedding artifact set."""
-    with (run_directory / "vectors.npy").open("rb") as vector_file:
+    """Load and validate a published or staged embedding artifact set.
+
+    Raises ValueError when files are corrupted, tampered with, misaligned, or
+    produced by a different artifact format or a mixed embedding contract.
+    """
+    try:
+        report = json.loads((run_directory / REPORT_FILE).read_text(encoding="utf-8"))
+        format_version = report["artifact_format_version"]
+        expected_checksums = report["artifact_sha256"]
+        model = report["model"]
+        normalized = model["normalize_embeddings"]
+        expected_contract = (
+            model["model_id"],
+            model["model_revision"],
+            model["expected_dimensions"],
+        )
+    except (json.JSONDecodeError, KeyError, TypeError) as error:
+        raise ValueError(f"Invalid embedding report: {error}") from error
+    if format_version != ARTIFACT_FORMAT_VERSION:
+        raise ValueError(
+            f"Unsupported embedding artifact format {format_version}; "
+            f"expected {ARTIFACT_FORMAT_VERSION}"
+        )
+    if not isinstance(normalized, bool):
+        raise ValueError("Embedding report must state normalize_embeddings")
+    # Checksums detect swapped, edited, or partially written row-aligned files
+    # that would otherwise still pass shape and count validation.
+    for file_name in (VECTORS_FILE, METADATA_FILE):
+        if _file_sha256(run_directory / file_name) != expected_checksums.get(file_name):
+            raise ValueError(f"Checksum mismatch for {file_name}")
+
+    with (run_directory / VECTORS_FILE).open("rb") as vector_file:
         vectors = np.load(vector_file, allow_pickle=False)
     records: list[EmbeddingRecord] = []
-    metadata_lines = (run_directory / "metadata.jsonl").read_text(
+    metadata_lines = (run_directory / METADATA_FILE).read_text(
         encoding="utf-8"
     ).splitlines()
     for line_number, line in enumerate(metadata_lines, start=1):
@@ -400,17 +514,45 @@ def load_embedding_artifacts(
             raise ValueError(
                 f"Invalid embedding metadata line {line_number}: {error}"
             ) from error
-    report = json.loads((run_directory / "report.json").read_text(encoding="utf-8"))
     if len(vectors) != len(records):
         raise ValueError("Persisted vector and metadata counts do not match")
     if [record.row_index for record in records] != list(range(len(records))):
         raise ValueError("Persisted metadata row indexes are not ordered")
     if len({record.chunk_id for record in records}) != len(records):
         raise ValueError("Persisted metadata contains duplicate chunk IDs")
-    dimensions = records[0].embedding_dimensions if records else vectors.shape[1]
-    normalized = bool(report.get("model", {}).get("normalize_embeddings", True))
-    validate_vectors(vectors, len(records), dimensions, normalized)
+    # One artifact must hold vectors from exactly one model contract.
+    for record in records:
+        record_contract = (
+            record.embedding_model_id,
+            record.embedding_model_revision,
+            record.embedding_dimensions,
+        )
+        if record_contract != expected_contract:
+            raise ValueError(
+                f"Row {record.row_index} model contract {record_contract} "
+                f"does not match report {expected_contract}"
+            )
+    validate_vectors(vectors, len(records), expected_contract[2], normalized)
     return vectors, tuple(records), report
+
+
+def load_reusable_run(
+    run_directory: Path,
+    corpus_sha256: str,
+    config: EmbeddingConfig,
+) -> tuple[np.ndarray, tuple[EmbeddingRecord, ...], dict[str, Any]]:
+    """Load an existing run only if it matches this corpus and model contract."""
+    vectors, records, report = load_embedding_artifacts(run_directory)
+    stored_encoding = {
+        name: report["model"].get(name) for name in config.fingerprint_fields()
+    }
+    if report.get("input", {}).get("corpus_sha256") != corpus_sha256:
+        raise ValueError(f"Existing run was built from another corpus: {run_directory}")
+    if stored_encoding != config.fingerprint_fields():
+        raise ValueError(
+            f"Existing run uses another embedding contract: {run_directory}"
+        )
+    return vectors, records, report
 
 
 def run_semantic_experiment(
@@ -423,9 +565,16 @@ def run_semantic_experiment(
     document_id: str | None = None,
     document_version: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Rank only explicitly authorized tenant/version rows by cosine score."""
+    """Rank rows inside a caller-supplied tenant/version scope by cosine score.
+
+    The tenant is trusted test input, not an authenticated identity; production
+    authorization belongs to the later retrieval service.
+    """
     if top_k <= 0:
         raise ValueError("top_k must be positive")
+    if document_version is not None and document_id is None:
+        # A bare version would unlock archived rows of every document.
+        raise ValueError("document_version requires document_id")
     candidates = [
         index for index, record in enumerate(records)
         if record.tenant_id == tenant_id
@@ -471,6 +620,18 @@ def load_evaluation_question(
     raise ValueError(f"Evaluation question not found: {question_id}")
 
 
+def question_search_scope(question: dict[str, str]) -> tuple[str | None, str | None]:
+    """Return the document/version filter a labeled question may legitimately use.
+
+    Only explicitly historical questions select their archived gold version.
+    All other questions search every active document in the tenant, so the gold
+    label is never used to narrow the candidates being evaluated.
+    """
+    if question["question_type"] == "version_conflict":
+        return question["gold_document_id"], question["gold_version"]
+    return None, None
+
+
 def evaluate_recall(
     path: Path,
     split: str,
@@ -498,7 +659,7 @@ def evaluate_recall(
         if row["expected_no_answer"].strip().lower() == "true":
             skipped_no_answer += 1
             continue
-        is_historical = row["question_type"] == "version_conflict"
+        document_id, document_version = question_search_scope(row)
         ranked = run_semantic_experiment(
             row["query"],
             row["tenant_id"],
@@ -506,8 +667,8 @@ def evaluate_recall(
             vectors,
             records,
             top_k=10,
-            document_id=row["gold_document_id"] if is_historical else None,
-            document_version=row["gold_version"] if is_historical else None,
+            document_id=document_id,
+            document_version=document_version,
         )
         matches = [
             item["document_id"] == row["gold_document_id"]

@@ -16,6 +16,9 @@ DEFAULT_DIMENSIONS = 384
 DEFAULT_BATCH_SIZE = 32
 QUERY_INSTRUCTION = "Represent this sentence for searching relevant passages: "
 ENCODING_CONFIG_VERSION = "phase5-v1"
+# Bump when the persisted run layout or report contract changes so older runs
+# are never mistaken for runs carrying the newer integrity guarantees.
+ARTIFACT_FORMAT_VERSION = 2
 
 
 @dataclass(frozen=True)
