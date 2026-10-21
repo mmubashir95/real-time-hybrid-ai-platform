@@ -127,6 +127,11 @@ python -m scripts.migrate_database upgrade
 See the [Phase 6.3 migration guide](docs/PHASE_6_3_DATABASE_MIGRATIONS.md) for
 backup, verification, integration-test, and recovery procedures.
 
+After the schema reaches revision 002, the existing Phase 5 artifacts can be
+validated and transactionally imported with the repository's
+[Phase 6.4 embedding import guide](docs/PHASE_6_4_EMBEDDING_IMPORT.md). The importer
+preserves active/archived source status and safely reuses identical records.
+
 Both `OPENAI_API_KEY` and `DATABASE_URL` are required; startup imports remain safe,
 and requests fail with controlled service-unavailable responses when storage is not
 configured or available.
