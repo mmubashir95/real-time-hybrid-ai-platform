@@ -56,6 +56,13 @@ only after the ordered migration history succeeds. Fresh and existing volumes us
 the same path instead of one-time PostgreSQL initialization scripts. See the
 [migration guide](docs/PHASE_6_3_DATABASE_MIGRATIONS.md).
 
+This automates migration execution during Compose deployment: PostgreSQL becomes
+healthy, pending migrations run, and FastAPI starts after they succeed. Inspect
+the migration result with `docker compose logs migrate`; an exit code of 0 is
+normal for this short-lived service. Future database changes still require a new
+SQL migration registered in the runner; editing a model alone does not update the
+database. See [automated migration startup](docs/PHASE_6_3_DATABASE_MIGRATIONS.md#automated-migrations-before-application-startup).
+
 Verify the API and its existing behavior:
 
 ```bash

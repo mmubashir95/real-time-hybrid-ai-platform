@@ -75,6 +75,38 @@ the DBA may enable it first and the deployment role can safely run the same upgr
 
 ## Docker Compose
 
+### Automated migrations before application startup
+
+Task 6.3 automates database migrations as part of the local Compose deployment.
+Previously, an engineer had to apply SQL files manually, and PostgreSQL init
+scripts only handled a newly created data volume. Compose now runs the repository's
+ordered migration runner through a dedicated, short-lived `migrate` service.
+
+When you run `docker compose up --build -d`, Compose builds the application and
+migration images and follows this startup sequence:
+
+```text
+postgres starts -> PostgreSQL health check passes
+                -> migrate applies pending revisions and exits successfully
+                -> api starts on http://localhost:8000
+```
+
+The migration container executes `python -m scripts.migrate_database upgrade`.
+The runner checks `schema_migrations` and skips recorded revisions. Existing
+application records and the named database volume are retained. If a migration
+fails, the service exits with an error and Compose blocks API startup; inspect
+`docker compose logs migrate`, correct the cause, and rerun the deployment command.
+
+This automation applies registered SQL migrations. Editing a SQLAlchemy model
+alone does not change the database: schema changes still need a new migration file
+and an entry in the runner's ordered `MIGRATIONS` manifest. Keep applied migration
+files unchanged. A standalone `docker compose restart api` does not run migrations.
+
+Set `OPENAI_API_KEY` in the local `.env` file before starting the complete stack.
+Compose validates that setting even though the migration runner itself does not
+call OpenAI. The application is deployed locally in Docker; these commands do not
+publish it to a cloud server.
+
 Compose pins `pgvector/pgvector:0.8.7-pg17-bookworm` by multi-platform digest.
 The `migrate` service waits for PostgreSQL health and must finish successfully
 before `api` starts. One-time PostgreSQL init scripts are deliberately not the
@@ -82,12 +114,17 @@ migration mechanism because they do not run for existing data volumes.
 
 ```bash
 docker compose up --build -d
-docker compose ps
+docker compose ps -a
 docker compose logs migrate
 ```
 
-An existing named volume is preserved. On restart, the runner reads its ledger and
-applies only pending revisions. Check persistence without deleting volumes:
+On the first runner-managed installation, successful output is normally
+`Applied migrations: 000, 001, 002`. If all revisions are already recorded, output
+is `Applied migrations: none`. The migration service exiting with code 0 is
+expected: it completes its job rather than running continuously.
+
+An existing named volume is preserved. When invoked again, the runner reads its
+ledger and applies only pending revisions. Check persistence without deleting volumes:
 
 ```bash
 docker compose restart postgres
