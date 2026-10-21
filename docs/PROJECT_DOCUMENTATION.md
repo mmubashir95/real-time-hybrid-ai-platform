@@ -269,10 +269,18 @@ The `analyses` table stores:
 
 The repository uses `schema.sql` for its initial application table and focused,
 versioned SQL files under `migrations/` for later database changes. New Compose
-volumes apply both during initialization. Existing databases must run each new
-migration explicitly; changing an initialization file alone does not update an
+volumes apply the initial table and pgvector migration during initialization.
+The Phase 6.2 RAG schema migration is deliberately manual, including on fresh
+databases. Existing databases must run each new migration explicitly; changing
+an initialization file alone does not update an
 existing database. Phase 6.1 setup and rollback steps are documented in
 [`PHASE_6_1_PGVECTOR_SETUP.md`](PHASE_6_1_PGVECTOR_SETUP.md).
+
+The approved RAG storage contract separates `documents`, `document_versions`,
+`document_chunks`, and `chunk_embeddings`. It retains tenant-scoped identities,
+archived editions, source provenance, and model-specific 384-dimensional vectors.
+See [Phase 6.2 schema and owner-run commands](PHASE_6_2_RAG_DATABASE_SCHEMA.md).
+No RAG import or retrieval service is implemented by this schema migration.
 
 ## 9. RAG ingestion workspace
 

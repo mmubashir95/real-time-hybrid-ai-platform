@@ -119,6 +119,12 @@ initial application table, while `migrations/001_enable_pgvector.sql` enables th
 database-scoped extension safely on fresh and existing databases. The app does not
 create tables or extensions on startup.
 
+Phase 6.2 adds an explicit migration for the RAG document/version/chunk/embedding
+schema. It is not applied automatically by Compose. Follow the
+[schema guide](docs/PHASE_6_2_RAG_DATABASE_SCHEMA.md) to apply
+`migrations/002_create_rag_schema.sql` yourself, inspect its output, and run the
+isolated database tests. It creates empty tables; embedding import is Task 6.3.
+
 Both `OPENAI_API_KEY` and `DATABASE_URL` are required; startup imports remain safe,
 and requests fail with controlled service-unavailable responses when storage is not
 configured or available.
