@@ -27,6 +27,7 @@ from app.rag.retrieval import (  # noqa: E402
     DenseRetriever,
     DenseSearchRequest,
     HistoricalVersionScope,
+    SearchContextOrigin,
     TrustedSearchContext,
 )
 
@@ -59,6 +60,11 @@ def parse_args(arguments: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--config-fingerprint", required=True)
     parser.add_argument("--historical-document-id")
     parser.add_argument("--historical-version")
+    parser.add_argument(
+        "--authorize-historical",
+        action="store_true",
+        help="Acknowledge trusted internal/test authorization for exact archived content.",
+    )
     parser.add_argument("--schema", default="public")
     parser.add_argument("--database-url", default=os.getenv("DATABASE_URL", ""))
     parser.add_argument("--device", default="cpu")
@@ -97,10 +103,18 @@ def _historical_scope(arguments: argparse.Namespace) -> HistoricalVersionScope |
         arguments.historical_version is not None,
     )
     if provided == (False, False):
+        if arguments.authorize_historical:
+            raise ValueError(
+                "--authorize-historical requires an exact historical document and version"
+            )
         return None
     if provided != (True, True):
         raise ValueError(
             "Historical retrieval requires --historical-document-id and --historical-version"
+        )
+    if not arguments.authorize_historical:
+        raise ValueError(
+            "Historical retrieval requires explicit --authorize-historical acknowledgement"
         )
     return HistoricalVersionScope(
         arguments.historical_document_id, arguments.historical_version
@@ -119,10 +133,13 @@ async def _run(arguments: argparse.Namespace, output: TextIO) -> None:
         encoding_config_version=config.encoding_config_version,
         query_instruction=config.query_instruction,
     )
+    historical = _historical_scope(arguments)
     context = TrustedSearchContext(
         tenant_id=tenant_id,
         permitted_visibilities=tuple(arguments.visibility or ["public"]),
-        historical=_historical_scope(arguments),
+        origin=SearchContextOrigin.INTERNAL,
+        historical=historical,
+        historical_access=historical is not None,
     )
     request = DenseSearchRequest(
         question=question,

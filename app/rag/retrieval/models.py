@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from math import isfinite
 from typing import Any
 
@@ -14,9 +15,16 @@ DEFAULT_TOP_K = 5
 DEFAULT_MAX_TOP_K = 100
 
 
+class SearchContextOrigin(str, Enum):
+    """Identify the trusted boundary that established retrieval permissions."""
+
+    AUTHENTICATED = "authenticated"
+    INTERNAL = "internal"
+
+
 @dataclass(frozen=True)
 class HistoricalVersionScope:
-    """Authorize retrieval from one exact historical document version."""
+    """Select one exact version after separate historical authorization."""
 
     document_id: str
     version: str
@@ -27,6 +35,12 @@ class HistoricalVersionScope:
             raise TypeError("Historical document_id and version must be strings")
         if not self.document_id.strip() or not self.version.strip():
             raise ValueError("Historical scope requires document_id and version")
+        has_outer_whitespace = (
+            self.document_id != self.document_id.strip()
+            or self.version != self.version.strip()
+        )
+        if has_outer_whitespace:
+            raise ValueError("Historical document_id and version must not have outer whitespace")
 
 
 @dataclass(frozen=True)
@@ -39,22 +53,47 @@ class TrustedSearchContext:
 
     tenant_id: str
     permitted_visibilities: tuple[str, ...]
+    origin: SearchContextOrigin
     historical: HistoricalVersionScope | None = None
+    historical_access: bool = False
 
     def __post_init__(self) -> None:
         """Validate that missing access data cannot broaden a search."""
-        if not isinstance(self.tenant_id, str) or not self.tenant_id.strip():
+        if not isinstance(self.tenant_id, str):
+            raise TypeError("Trusted tenant scope must be a string")
+        if not self.tenant_id.strip():
             raise ValueError("Trusted tenant scope is required")
+        if self.tenant_id != self.tenant_id.strip():
+            raise ValueError("Trusted tenant scope must not have outer whitespace")
         if not isinstance(self.permitted_visibilities, tuple):
             raise TypeError("permitted_visibilities must be a tuple")
         if not self.permitted_visibilities:
             raise ValueError("At least one permitted visibility is required")
+        if not all(
+            isinstance(visibility, str)
+            for visibility in self.permitted_visibilities
+        ):
+            raise TypeError("Permitted visibilities must be strings")
         if len(set(self.permitted_visibilities)) != len(self.permitted_visibilities):
             raise ValueError("Permitted visibilities must be unique")
         unsupported = set(self.permitted_visibilities) - ALLOWED_VISIBILITIES
         if unsupported:
             raise ValueError(
                 f"Unsupported visibility scope: {', '.join(sorted(unsupported))}"
+            )
+        if not isinstance(self.origin, SearchContextOrigin):
+            raise TypeError("origin must be a SearchContextOrigin")
+        if self.historical is not None and not isinstance(
+            self.historical, HistoricalVersionScope
+        ):
+            raise TypeError("historical must be a HistoricalVersionScope")
+        if not isinstance(self.historical_access, bool):
+            raise TypeError("historical_access must be a boolean")
+        # Historical permission is useful only with an exact document/version;
+        # rejecting mismatched flags prevents a future caller from broadening it.
+        if (self.historical is None) != (not self.historical_access):
+            raise ValueError(
+                "Historical scope and explicit historical access must be provided together"
             )
 
 

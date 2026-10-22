@@ -153,8 +153,9 @@ class DenseRetriever:
     ) -> list[asyncpg.Record]:
         """Execute filtering and ranking in one parameterized SQL statement."""
         historical = request.context.historical
-        # NULL historical parameters select only active versions. Non-NULL
-        # parameters authorize exactly one named document version of any status.
+        # Current policy permits active content. Historical permission is
+        # intentionally narrower: it permits only one exact archived version,
+        # never staged or withdrawn content.
         document_id = historical.document_id if historical else None
         document_version = historical.version if historical else None
         async with self._connection.transaction():
@@ -178,7 +179,8 @@ class DenseRetriever:
                     WHERE d.tenant_id=$1
                       AND v.visibility=ANY($2::text[])
                       AND (($8::text IS NULL AND v.status='active') OR
-                           ($8::text IS NOT NULL AND d.document_id=$8 AND v.version=$9))
+                           ($8::text IS NOT NULL AND v.status='archived'
+                            AND d.document_id=$8 AND v.version=$9))
                       AND e.embedding_model_id=$3
                       AND e.embedding_model_revision=$4
                       AND e.embedding_config_fingerprint=$5

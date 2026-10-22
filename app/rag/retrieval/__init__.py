@@ -7,6 +7,7 @@ from app.rag.retrieval.models import (
     DenseSearchResponse,
     DenseSearchResult,
     HistoricalVersionScope,
+    SearchContextOrigin,
     TrustedSearchContext,
 )
 
@@ -18,6 +19,7 @@ __all__ = [
     "DenseSearchResult",
     "HistoricalVersionScope",
     "RetrievalError",
+    "SearchContextOrigin",
     "TrustedSearchContext",
     "evaluate_against_phase5",
 ]

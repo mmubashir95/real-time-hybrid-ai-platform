@@ -20,6 +20,7 @@ from app.rag.retrieval.dense import DenseRetriever
 from app.rag.retrieval.models import (
     DenseSearchRequest,
     HistoricalVersionScope,
+    SearchContextOrigin,
     TrustedSearchContext,
 )
 
@@ -77,7 +78,11 @@ async def evaluate_against_phase5(
         response = await retriever.search(
             DenseSearchRequest(
                 context=TrustedSearchContext(
-                    question["tenant_id"], permitted_visibilities, historical
+                    tenant_id=question["tenant_id"],
+                    permitted_visibilities=permitted_visibilities,
+                    origin=SearchContextOrigin.INTERNAL,
+                    historical=historical,
+                    historical_access=historical is not None,
                 ),
                 profile=profile,
                 question=question["query"],

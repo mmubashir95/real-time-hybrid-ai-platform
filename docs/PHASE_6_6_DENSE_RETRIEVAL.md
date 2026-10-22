@@ -76,7 +76,9 @@ python scripts/search_rag_dense.py \
 Use `--question-id AST-REF-001-Q01` instead of `--question` to load a question
 and tenant from the existing evaluation bank. Add `--visibility internal` only
 when that test context is authorized. Historical retrieval additionally needs
-both `--historical-document-id` and `--historical-version`.
+both `--historical-document-id` and `--historical-version`. Task 6.7 also
+requires `--authorize-historical`; see
+`docs/PHASE_6_7_RETRIEVAL_SCOPE_ENFORCEMENT.md` for the hardened policy.
 
 The CLI reports model-loading, query-encoding, SQL, and total retrieval time,
 plus the eligible candidate count and returned chunk IDs. It loads the model

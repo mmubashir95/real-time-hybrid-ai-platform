@@ -53,6 +53,15 @@ class EmbeddingProfile:
 
     def __post_init__(self) -> None:
         """Reject incomplete or malformed embedding-space identities."""
+        string_fields = (
+            self.model_id,
+            self.model_revision,
+            self.config_fingerprint,
+            self.encoding_config_version,
+            self.query_instruction,
+        )
+        if not all(isinstance(value, str) for value in string_fields):
+            raise TypeError("Embedding profile identity fields must be strings")
         if not self.model_id.strip():
             raise ValueError("Embedding profile model_id must not be empty")
         if not re.fullmatch(r"[0-9a-f]{40}", self.model_revision):

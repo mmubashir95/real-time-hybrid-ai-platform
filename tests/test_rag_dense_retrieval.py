@@ -18,6 +18,7 @@ from app.rag.retrieval import (
     DenseRetriever,
     DenseSearchRequest,
     HistoricalVersionScope,
+    SearchContextOrigin,
     TrustedSearchContext,
 )
 
@@ -57,16 +58,34 @@ class DenseSearchContractTests(unittest.TestCase):
 
     def setUp(self) -> None:
         """Build the smallest trusted current-policy context."""
-        self.context = TrustedSearchContext("tenant-a", ("public",))
+        self.context = TrustedSearchContext(
+            "tenant-a", ("public",), SearchContextOrigin.INTERNAL
+        )
 
     def test_question_scope_and_top_k_validation(self) -> None:
         """Reject blank queries, missing scope, invalid visibility, and bad Top-K."""
         with self.assertRaisesRegex(ValueError, "Question"):
             DenseSearchRequest(self.context, PROFILE, question="  ")
         with self.assertRaisesRegex(ValueError, "tenant"):
-            TrustedSearchContext("", ("public",))
+            TrustedSearchContext("", ("public",), SearchContextOrigin.INTERNAL)
+        with self.assertRaisesRegex(TypeError, "string"):
+            TrustedSearchContext(123, ("public",), SearchContextOrigin.INTERNAL)
+        with self.assertRaisesRegex(ValueError, "outer whitespace"):
+            TrustedSearchContext(
+                " tenant-a", ("public",), SearchContextOrigin.INTERNAL
+            )
         with self.assertRaisesRegex(ValueError, "visibility"):
-            TrustedSearchContext("tenant-a", ("private",))
+            TrustedSearchContext(
+                "tenant-a", ("private",), SearchContextOrigin.INTERNAL
+            )
+        with self.assertRaisesRegex(ValueError, "visibility"):
+            TrustedSearchContext("tenant-a", (), SearchContextOrigin.INTERNAL)
+        with self.assertRaisesRegex(TypeError, "visibilities"):
+            TrustedSearchContext(
+                "tenant-a", (123,), SearchContextOrigin.INTERNAL
+            )
+        with self.assertRaisesRegex(TypeError, "origin"):
+            TrustedSearchContext("tenant-a", ("public",), "internal")
         with self.assertRaisesRegex(ValueError, "top_k"):
             DenseSearchRequest(self.context, PROFILE, question="valid", top_k=101)
 
@@ -86,6 +105,21 @@ class DenseSearchContractTests(unittest.TestCase):
         """Prevent a historical request from spanning unrelated documents."""
         with self.assertRaisesRegex(ValueError, "document_id and version"):
             HistoricalVersionScope("DOC-1", "")
+        exact_scope = HistoricalVersionScope("DOC-1", "1.0")
+        with self.assertRaisesRegex(ValueError, "provided together"):
+            TrustedSearchContext(
+                "tenant-a",
+                ("public",),
+                SearchContextOrigin.INTERNAL,
+                historical=exact_scope,
+            )
+        with self.assertRaisesRegex(ValueError, "provided together"):
+            TrustedSearchContext(
+                "tenant-a",
+                ("public",),
+                SearchContextOrigin.INTERNAL,
+                historical_access=True,
+            )
 
     def test_precomputed_vector_validation(self) -> None:
         """Reject wrong-dimensional, nonfinite, and zero query vectors."""
@@ -237,30 +271,81 @@ class DenseSearchPostgresTests(unittest.IsolatedAsyncioTestCase):
             tenant="tenant-a", document="DOC-D", version="1.0", status="archived",
             visibility="public", suffix="d", vector=unit_vector(0)
         )
-        await self._insert_chunk(
+        self.staged = await self._insert_chunk(
             tenant="tenant-a", document="DOC-STAGED", version="1.0", status="staged",
             visibility="public", suffix="1", vector=unit_vector(0)
         )
-        await self._insert_chunk(
+        self.withdrawn = await self._insert_chunk(
             tenant="tenant-a", document="DOC-WITHDRAWN", version="1.0",
             status="withdrawn", visibility="public", suffix="2", vector=unit_vector(0)
         )
-        await self._insert_chunk(
+        self.other_tenant = await self._insert_chunk(
             tenant="tenant-b", document="DOC-E", version="1.0", status="active",
             visibility="public", suffix="e", vector=unit_vector(0)
         )
-        incompatible = EmbeddingProfile(
-            PROFILE.model_id, PROFILE.model_revision, "f" * 64, True, "phase5-v1"
+        incompatible_profiles = (
+            EmbeddingProfile(
+                "different/model",
+                PROFILE.model_revision,
+                PROFILE.config_fingerprint,
+                True,
+                PROFILE.encoding_config_version,
+            ),
+            EmbeddingProfile(
+                PROFILE.model_id,
+                "d" * 40,
+                PROFILE.config_fingerprint,
+                True,
+                PROFILE.encoding_config_version,
+            ),
+            EmbeddingProfile(
+                PROFILE.model_id,
+                PROFILE.model_revision,
+                "f" * 64,
+                True,
+                PROFILE.encoding_config_version,
+            ),
+            EmbeddingProfile(
+                PROFILE.model_id,
+                PROFILE.model_revision,
+                PROFILE.config_fingerprint,
+                False,
+                PROFILE.encoding_config_version,
+            ),
+            EmbeddingProfile(
+                PROFILE.model_id,
+                PROFILE.model_revision,
+                PROFILE.config_fingerprint,
+                True,
+                "different-encoding",
+            ),
+            EmbeddingProfile(
+                PROFILE.model_id,
+                PROFILE.model_revision,
+                PROFILE.config_fingerprint,
+                True,
+                PROFILE.encoding_config_version,
+                "different query instruction",
+            ),
         )
-        await self._insert_chunk(
-            tenant="tenant-a", document="DOC-F", version="1.0", status="active",
-            visibility="public", suffix="f", vector=unit_vector(0), profile=incompatible
-        )
+        for index, incompatible_profile in enumerate(incompatible_profiles, start=3):
+            await self._insert_chunk(
+                tenant="tenant-a",
+                document=f"DOC-INCOMPATIBLE-{index}",
+                version="1.0",
+                status="active",
+                visibility="public",
+                suffix=str(index),
+                vector=unit_vector(0),
+                profile=incompatible_profile,
+            )
 
     async def test_exact_ranking_and_all_default_filters(self) -> None:
         """Apply tenant, lifecycle, visibility, and model filters before Top-K."""
         request = DenseSearchRequest(
-            TrustedSearchContext("tenant-a", ("public",)),
+            TrustedSearchContext(
+                "tenant-a", ("public",), SearchContextOrigin.INTERNAL
+            ),
             PROFILE,
             query_vector=unit_vector(0),
             top_k=10,
@@ -281,8 +366,12 @@ class DenseSearchPostgresTests(unittest.IsolatedAsyncioTestCase):
     async def test_visibility_historical_and_wrong_tenant_scopes(self) -> None:
         """Broaden only explicitly trusted visibility or exact historical scope."""
         internal = DenseSearchRequest(
-            TrustedSearchContext("tenant-a", ("internal",)), PROFILE,
-            query_vector=unit_vector(0), top_k=5
+            TrustedSearchContext(
+                "tenant-a", ("internal",), SearchContextOrigin.INTERNAL
+            ),
+            PROFILE,
+            query_vector=unit_vector(0),
+            top_k=5,
         )
         internal_response = await DenseRetriever(
             self.connection, None, schema=self.schema
@@ -291,7 +380,11 @@ class DenseSearchPostgresTests(unittest.IsolatedAsyncioTestCase):
 
         historical = DenseSearchRequest(
             TrustedSearchContext(
-                "tenant-a", ("public",), HistoricalVersionScope("DOC-D", "1.0")
+                tenant_id="tenant-a",
+                permitted_visibilities=("public",),
+                origin=SearchContextOrigin.INTERNAL,
+                historical=HistoricalVersionScope("DOC-D", "1.0"),
+                historical_access=True,
             ),
             PROFILE,
             query_vector=unit_vector(0),
@@ -304,14 +397,62 @@ class DenseSearchPostgresTests(unittest.IsolatedAsyncioTestCase):
         )
 
         wrong_tenant = DenseSearchRequest(
-            TrustedSearchContext("missing", ("public",)), PROFILE,
-            query_vector=unit_vector(0)
+            TrustedSearchContext(
+                "missing", ("public",), SearchContextOrigin.INTERNAL
+            ),
+            PROFILE,
+            query_vector=unit_vector(0),
         )
         empty = await DenseRetriever(
             self.connection, None, schema=self.schema
         ).search(wrong_tenant)
         self.assertEqual(empty.results, ())
         self.assertEqual(empty.candidate_count, 0)
+
+    async def test_unauthorized_high_similarity_rows_do_not_consume_top_k(self) -> None:
+        """Rank after access filtering so two authorized rows fill both slots."""
+        request = DenseSearchRequest(
+            TrustedSearchContext(
+                "tenant-a", ("public",), SearchContextOrigin.INTERNAL
+            ),
+            PROFILE,
+            query_vector=unit_vector(0),
+            top_k=2,
+        )
+        response = await DenseRetriever(
+            self.connection, None, schema=self.schema
+        ).search(request)
+        self.assertEqual(
+            [item.chunk_id for item in response.results],
+            [self.best, self.second],
+        )
+        self.assertEqual(response.candidate_count, 2)
+
+    async def test_historical_scope_excludes_non_archived_and_cross_tenant_rows(self) -> None:
+        """Permit one archived version while denying staged, withdrawn, and foreign rows."""
+        for document_id, version in (
+            ("DOC-STAGED", "1.0"),
+            ("DOC-WITHDRAWN", "1.0"),
+            ("DOC-A", "2.0"),
+            ("DOC-E", "1.0"),
+            ("DOC-D", "missing"),
+        ):
+            request = DenseSearchRequest(
+                TrustedSearchContext(
+                    tenant_id="tenant-a",
+                    permitted_visibilities=("public",),
+                    origin=SearchContextOrigin.INTERNAL,
+                    historical=HistoricalVersionScope(document_id, version),
+                    historical_access=True,
+                ),
+                PROFILE,
+                query_vector=unit_vector(0),
+            )
+            response = await DenseRetriever(
+                self.connection, None, schema=self.schema
+            ).search(request)
+            self.assertEqual(response.results, (), document_id)
+            self.assertEqual(response.candidate_count, 0, document_id)
 
 
 if __name__ == "__main__":
