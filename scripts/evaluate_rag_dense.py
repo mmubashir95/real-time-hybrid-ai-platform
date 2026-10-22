@@ -168,6 +168,22 @@ def _is_hit(
     )
 
 
+def _gold_is_reachable(
+    question: dict[str, str],
+    gold_visibilities: dict[tuple[str, str, str], str],
+    permitted_visibilities: tuple[str, ...],
+) -> bool:
+    """Return whether the question's gold version is visible under a scope.
+
+    A question whose gold document is hidden by policy can never score a hit,
+    so it measures the visibility rule rather than retrieval quality.
+    """
+    gold_visibility = gold_visibilities.get(
+        (question["tenant_id"], question["gold_document_id"], question["gold_version"])
+    )
+    return gold_visibility in permitted_visibilities
+
+
 async def _evaluate(arguments: argparse.Namespace) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Execute one read-only evaluation and return summary and per-query records."""
     run_directory = resolve_embedding_run(
@@ -209,9 +225,15 @@ async def _evaluate(arguments: argparse.Namespace) -> tuple[dict[str, Any], list
         encoder = SentenceTransformerEncoder(config)
         retriever = DenseRetriever(connection, None, schema=arguments.schema)
         records_by_id = {record.chunk_id: record for record in records}
+        gold_visibilities = {
+            (record.tenant_id, record.document_id, record.document_version):
+                record.access_scope
+            for record in records
+        }
         production_visibilities = tuple(arguments.visibility or ["public"])
         outcomes: list[dict[str, Any]] = []
         evaluated = no_answer = matched_5 = matched_10 = production_5 = production_10 = 0
+        production_reachable = 0
         exact_matches = explained_ties = 0
         unexplained_differences: list[str] = []
         encoding_samples: list[float] = []
@@ -273,6 +295,10 @@ async def _evaluate(arguments: argparse.Namespace) -> tuple[dict[str, Any], list
             production_10 += int(
                 _is_hit(production_ids, records_by_id, question, 10)
             )
+            gold_reachable = _gold_is_reachable(
+                question, gold_visibilities, production_visibilities
+            )
+            production_reachable += int(gold_reachable)
             encoding_samples.append(encoding_seconds)
             sql_samples.append(production_database_seconds)
             total_samples.append(encoding_seconds + production_total_seconds)
@@ -284,11 +310,17 @@ async def _evaluate(arguments: argparse.Namespace) -> tuple[dict[str, Any], list
                 ),
                 "matched_scope": comparison.to_dict(),
                 "production_chunk_ids": list(production_ids),
+                "production_gold_reachable": gold_reachable,
             })
     finally:
         await connection.close()
 
     recall = lambda hits: hits / evaluated if evaluated else 0.0
+    # Unreachable questions cannot hit, so all production hits are reachable
+    # hits; only the denominator changes for policy-independent quality.
+    reachable_recall = (
+        lambda hits: hits / production_reachable if production_reachable else 0.0
+    )
     report = {
         "status": "PASS" if not unexplained_differences else "FAIL",
         "execution": {
@@ -337,7 +369,11 @@ async def _evaluate(arguments: argparse.Namespace) -> tuple[dict[str, Any], list
             "production_scope": {"hits_at_5": production_5,
                                  "hits_at_10": production_10,
                                  "recall_at_5": recall(production_5),
-                                 "recall_at_10": recall(production_10)},
+                                 "recall_at_10": recall(production_10),
+                                 "reachable_questions": production_reachable,
+                                 "unreachable_questions": evaluated - production_reachable,
+                                 "reachable_recall_at_5": reachable_recall(production_5),
+                                 "reachable_recall_at_10": reachable_recall(production_10)},
             "match_semantics": "document+version+section anchor",
         },
         "security_filtering": {
@@ -408,6 +444,13 @@ def main(
           f"{report['ranking_parity']['queries_compared']}", file=output)
     print(f"Matched Recall@5: {quality['matched_scope']['recall_at_5']:.4f}", file=output)
     print(f"Matched Recall@10: {quality['matched_scope']['recall_at_10']:.4f}", file=output)
+    production = quality["production_scope"]
+    print(f"Production reachable questions: {production['reachable_questions']}/"
+          f"{quality['evaluated_questions']}", file=output)
+    print(f"Production reachable Recall@5: {production['reachable_recall_at_5']:.4f}",
+          file=output)
+    print(f"Production reachable Recall@10: {production['reachable_recall_at_10']:.4f}",
+          file=output)
     print(f"Report directory: {result_directory}", file=output)
     print(f"FINAL STATUS: {report['status']}", file=output)
     return 0 if report["status"] == "PASS" else 2

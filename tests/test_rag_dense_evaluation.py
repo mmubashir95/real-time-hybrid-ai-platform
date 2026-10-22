@@ -16,6 +16,7 @@ from app.rag.retrieval.verification import (
     latency_summary,
     percentile_95,
 )
+from scripts.evaluate_rag_dense import _gold_is_reachable
 
 
 def record(
@@ -96,6 +97,33 @@ class DenseEvaluationHelperTests(unittest.TestCase):
             np.asarray([1.0, 0.0, 0.0]), vectors, records, self.context, top_k=1
         )
         self.assertEqual([item[0] for item in ranked], ["chk_" + "d" * 64])
+
+    def test_gold_reachability_follows_permitted_visibility(self) -> None:
+        """Count a question as reachable only when its gold version is visible."""
+        gold_visibilities = {
+            ("asterdesk", "DOC-PUBLIC", "1.0"): "public",
+            ("asterdesk", "DOC-INTERNAL", "1.0"): "internal",
+        }
+
+        def question(document_id: str, tenant: str = "asterdesk") -> dict[str, str]:
+            """Build the gold-label fields the reachability rule reads."""
+            return {"tenant_id": tenant, "gold_document_id": document_id,
+                    "gold_version": "1.0"}
+
+        public_only = ("public",)
+        self.assertTrue(
+            _gold_is_reachable(question("DOC-PUBLIC"), gold_visibilities, public_only)
+        )
+        self.assertFalse(
+            _gold_is_reachable(question("DOC-INTERNAL"), gold_visibilities, public_only)
+        )
+        self.assertTrue(_gold_is_reachable(
+            question("DOC-INTERNAL"), gold_visibilities, ("public", "internal")
+        ))
+        # A gold label under another tenant must not borrow this tenant's scope.
+        self.assertFalse(_gold_is_reachable(
+            question("DOC-PUBLIC", tenant="brookhaven"), gold_visibilities, public_only
+        ))
 
     def test_latency_summary_uses_nearest_rank_p95(self) -> None:
         """Report measured sample count, median, extrema, and p95."""
