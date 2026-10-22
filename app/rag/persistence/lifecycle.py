@@ -11,6 +11,7 @@ from typing import Literal
 
 import asyncpg
 
+from app.rag.embeddings.models import QUERY_INSTRUCTION
 from app.rag.persistence.artifacts import ImportPlan
 from app.rag.persistence.importer import ImportResult, import_rag_embeddings
 
@@ -48,6 +49,20 @@ class EmbeddingProfile:
     config_fingerprint: str
     normalize_embeddings: bool
     encoding_config_version: str
+    query_instruction: str = QUERY_INSTRUCTION
+
+    def __post_init__(self) -> None:
+        """Reject incomplete or malformed embedding-space identities."""
+        if not self.model_id.strip():
+            raise ValueError("Embedding profile model_id must not be empty")
+        if not re.fullmatch(r"[0-9a-f]{40}", self.model_revision):
+            raise ValueError("Embedding profile revision must be a commit SHA")
+        if not re.fullmatch(r"[0-9a-f]{64}", self.config_fingerprint):
+            raise ValueError("Embedding profile fingerprint must be SHA-256")
+        if not isinstance(self.normalize_embeddings, bool):
+            raise TypeError("Embedding profile normalization flag must be boolean")
+        if not self.encoding_config_version.strip() or not self.query_instruction.strip():
+            raise ValueError("Embedding profile encoding identity must not be empty")
 
 
 @dataclass(frozen=True)
@@ -216,6 +231,7 @@ async def _verify_complete_version(
           AND e.embedding_config_fingerprint=$4
           AND e.normalize_embeddings=$5
           AND e.encoding_config_version=$6
+          AND e.query_instruction=$7
           AND e.input_fingerprint IS NOT NULL
           AND public.vector_dims(e.embedding)=384
         """,
@@ -225,6 +241,7 @@ async def _verify_complete_version(
         profile.config_fingerprint,
         profile.normalize_embeddings,
         profile.encoding_config_version,
+        profile.query_instruction,
     ) or [])
     if compatible_ids != chunk_ids:
         raise IncompleteVersion("Required compatible embeddings are missing or incompatible")
@@ -390,6 +407,7 @@ async def fetch_current_chunk_ids(
               AND e.embedding_model_id=$3 AND e.embedding_model_revision=$4
               AND e.embedding_config_fingerprint=$5
               AND e.normalize_embeddings=$6 AND e.encoding_config_version=$7
+              AND e.query_instruction=$8
             ORDER BY c.chunk_id
             """,
             tenant_id,
@@ -399,5 +417,6 @@ async def fetch_current_chunk_ids(
             profile.config_fingerprint,
             profile.normalize_embeddings,
             profile.encoding_config_version,
+            profile.query_instruction,
         )
     return tuple(row["chunk_id"] for row in rows)
