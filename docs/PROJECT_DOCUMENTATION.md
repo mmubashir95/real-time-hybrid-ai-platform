@@ -268,14 +268,13 @@ The repository uses `schema.sql` as revision 000 and focused SQL files under
 `migrations/` for later changes. `scripts/migrate_database.py` records ordered
 revisions and checksums, and Compose runs it before starting the API. Fresh and
 existing databases therefore use the same upgrade path. See
-[`PHASE_6_3_DATABASE_MIGRATIONS.md`](PHASE_6_3_DATABASE_MIGRATIONS.md) for backup,
-status, testing, and recovery commands.
+[`PHASE_6_POSTGRESQL_PGVECTOR_DENSE_RETRIEVAL.md`](PHASE_6_POSTGRESQL_PGVECTOR_DENSE_RETRIEVAL.md)
+for backup, status, testing, and recovery commands.
 
 The approved RAG storage contract separates `documents`, `document_versions`,
 `document_chunks`, and `chunk_embeddings`. It retains tenant-scoped identities,
 archived editions, source provenance, and model-specific 384-dimensional vectors.
-See [Phase 6.2 schema and owner-run commands](PHASE_6_2_RAG_DATABASE_SCHEMA.md).
-No RAG import or retrieval service is implemented by this schema migration.
+See the [consolidated Phase 6 schema and owner-run commands](PHASE_6_POSTGRESQL_PGVECTOR_DENSE_RETRIEVAL.md#database-storage-contract).
 
 ## 9. RAG ingestion workspace
 
@@ -396,4 +395,6 @@ history before sending the archive outside a trusted environment.
 - `data/rag/README.md` — corpus contents, restrictions, and practice workflow
 - `docs/PHASE_5_PRODUCTION_EMBEDDINGS.md` — pinned local embedding pipeline,
   artifacts, tests, and semantic experiment
+- `docs/PHASE_6_POSTGRESQL_PGVECTOR_DENSE_RETRIEVAL.md` — consolidated Phase 6
+  database, import, lifecycle, scoped retrieval, evaluation, and testing guide
 
