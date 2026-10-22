@@ -521,19 +521,36 @@ async def import_rag_embeddings(
             (inserted if was_inserted else reused)["documents"] += 1
 
         version_pks: dict[tuple[str, str, str], int] = {}
+        # Existing non-staged versions are already published or retired; their
+        # chunk sets may only be re-verified, never extended, by an import.
+        frozen_versions: set[tuple[str, str, str]] = set()
         for version in plan.versions:
             document_pk = document_pks[(version.tenant_id, version.document_id)]
             version_pk, was_inserted = await _insert_or_verify_version(
                 connection, document_pk, version
             )
-            version_pks[(version.tenant_id, version.document_id, version.version)] = version_pk
+            version_key = (version.tenant_id, version.document_id, version.version)
+            version_pks[version_key] = version_pk
             (inserted if was_inserted else reused)["versions"] += 1
+            # Reuse already proved the stored status equals version.status.
+            if not was_inserted and version.status != "staged":
+                frozen_versions.add(version_key)
 
         for chunk in plan.chunks:
-            version_pk = version_pks[
-                (chunk.tenant_id, chunk.document_id, chunk.document_version)
-            ]
-            was_inserted = await _insert_or_verify_chunk(connection, version_pk, chunk)
+            version_key = (chunk.tenant_id, chunk.document_id, chunk.document_version)
+            was_inserted = await _insert_or_verify_chunk(
+                connection, version_pks[version_key], chunk
+            )
+            if was_inserted and version_key in frozen_versions:
+                # Re-chunking an unchanged source yields new chunk IDs under the
+                # same version identity. Adding them here would silently change
+                # searchable content outside staging and publication. Raising
+                # inside the transaction rolls back every write from this plan.
+                raise RagImportConflict(
+                    "Cannot add chunks to existing "
+                    f"{chunk.tenant_id}/{chunk.document_id}/{chunk.document_version}; "
+                    "stage a new version instead"
+                )
             (inserted if was_inserted else reused)["chunks"] += 1
 
         for embedding in plan.embeddings:

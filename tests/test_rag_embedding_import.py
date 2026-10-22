@@ -476,6 +476,31 @@ class RagEmbeddingImportIntegrationTests(unittest.IsolatedAsyncioTestCase):
                 schema=self.schema,
             )
 
+    async def test_new_chunks_cannot_extend_existing_published_version(self) -> None:
+        """Reject re-chunked content under an active version and keep it unchanged."""
+        plan = make_plan()
+        await import_rag_embeddings(self.connection, plan, schema=self.schema)
+        # Same version metadata, but an extra chunk with a new stable ID, as
+        # produced by re-chunking an unchanged source with another configuration.
+        extra_chunk = replace(
+            plan.chunks[0], chunk_id="chk_" + "f" * 64, chunk_index=1
+        )
+        extra_embedding = replace(plan.embeddings[0], chunk_id=extra_chunk.chunk_id)
+        extended_plan = replace(
+            plan,
+            chunks=plan.chunks + (extra_chunk,),
+            embeddings=plan.embeddings + (extra_embedding,),
+        )
+
+        with self.assertRaisesRegex(RagImportConflict, "stage a new version"):
+            await import_rag_embeddings(
+                self.connection, extended_plan, schema=self.schema
+            )
+        self.assertEqual(await self._count("document_chunks"), 1)
+        self.assertEqual(await self._count("chunk_embeddings"), 1)
+        retry = await import_rag_embeddings(self.connection, plan, schema=self.schema)
+        self.assertEqual(retry.counts.chunks_reused, 1)
+
     async def test_concurrent_identical_imports_create_one_identity_set(self) -> None:
         """Serialize shared documents and reuse the winner's committed rows."""
         second_connection = await asyncpg.connect(self.dsn, timeout=5)
