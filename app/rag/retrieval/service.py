@@ -85,7 +85,7 @@ class RetrievalService:
                 for rank, candidate in enumerate(fused, start=1)
             )
             fusion_seconds = perf_counter() - fusion_started
-            fused_count = len({item.chunk_id for item in keyword_response.results} | {
+            fused_count = len({item.chunk.chunk_id for item in keyword_response.results} | {
                 item.chunk_id for item in dense_response.results
             })
 
