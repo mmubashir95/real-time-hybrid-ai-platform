@@ -60,12 +60,21 @@ class ReciprocalRankFusionTests(unittest.TestCase):
         self.assertEqual([item.chunk_id for item in fused], ["chk_" + "a" * 64, "chk_" + "b" * 64])
 
     def test_conflicting_provenance_is_rejected(self) -> None:
-        """Do not merge a corrupt stable ID that points to different documents."""
+        """Do not merge a corrupt stable ID whose source attribution differs."""
         lexical = KeywordMatch(chunk("a", "alpha"), 1.0, 1)
-        semantic = dense("a")
-        object.__setattr__(semantic, "document_id", "OTHER")
-        with self.assertRaisesRegex(ValueError, "Conflicting provenance"):
-            reciprocal_rank_fusion((lexical,), (semantic,), limit=1)
+        for field, value in (
+            ("tenant_id", "tenant-b"),
+            ("document_id", "OTHER"),
+            ("document_version", "9.0"),
+            ("heading_path", ("Other",)),
+            ("source_path", "sources/other.md"),
+        ):
+            semantic = dense("a")
+            object.__setattr__(semantic, field, value)
+            with self.subTest(field=field), self.assertRaisesRegex(
+                ValueError, "Conflicting provenance"
+            ):
+                reciprocal_rank_fusion((lexical,), (semantic,), limit=1)
 
 
 if __name__ == "__main__":

@@ -59,8 +59,13 @@ def reciprocal_rank_fusion(
             # A shared stable identity must refer to identical source ownership;
             # otherwise fusion could hide corrupt or cross-tenant metadata.
             assert isinstance(keyword, KeywordMatch)
-            if (keyword.chunk.tenant_id, keyword.chunk.document_id) != (
-                result.tenant_id, result.document_id
+            lexical = keyword.chunk
+            if (
+                lexical.tenant_id, lexical.document_id, lexical.document_version,
+                lexical.heading_path, lexical.source_path,
+            ) != (
+                result.tenant_id, result.document_id, result.document_version,
+                result.heading_path, result.source_path,
             ):
                 raise ValueError("Conflicting provenance for fused chunk ID")
     fused = tuple(
