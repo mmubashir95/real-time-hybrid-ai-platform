@@ -449,6 +449,45 @@ class DocumentLifecycleIntegrationTests(unittest.IsolatedAsyncioTestCase):
             )
         self.assertEqual((await self._statuses())["1.0"], "active")
 
+    async def test_embeddings_from_another_profile_do_not_block_publication(self) -> None:
+        """Publish a complete version whose chunks also have a second model's vectors."""
+        plan = await self._stage("2.0", ("a", "b"))
+        await self.connection.execute(f'SET search_path TO "{self.schema}", public')
+        # Duplicate each staged embedding under a different model revision, as
+        # a fine-tuned embedding run over the same chunks would.
+        await self.connection.execute(
+            """
+            INSERT INTO chunk_embeddings (
+                chunk_id, embedding, embedding_model_id, embedding_model_revision,
+                embedding_config_fingerprint, input_fingerprint,
+                document_instruction, query_instruction, normalize_embeddings,
+                encoding_config_version
+            )
+            SELECT chunk_id, embedding, embedding_model_id, $1,
+                   embedding_config_fingerprint, input_fingerprint,
+                   document_instruction, query_instruction, normalize_embeddings,
+                   encoding_config_version
+            FROM chunk_embeddings WHERE chunk_id = ANY($2::text[])
+            """,
+            "e" * 40,
+            [chunk.chunk_id for chunk in plan.chunks],
+        )
+
+        result = await publish_document_version(
+            self.connection,
+            tenant_id="tenant-lifecycle",
+            document_id="DOC-LIFECYCLE",
+            target_version="2.0",
+            expected_active_version="1.0",
+            profile=PROFILE,
+            schema=self.schema,
+        )
+
+        self.assertEqual(result.outcome, "published")
+        self.assertEqual(
+            await self._statuses(), {"1.0": "archived", "2.0": "active"}
+        )
+
     async def test_conflicting_staging_retry_is_rejected(self) -> None:
         """Never replace the stored expected count or fingerprint on retry."""
         await self._stage("2.0")

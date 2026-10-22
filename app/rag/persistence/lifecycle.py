@@ -216,19 +216,11 @@ async def _verify_complete_version(
         or chunk_ids_fingerprint(chunk_ids) != expected_fingerprint
     ):
         raise IncompleteVersion("Stored chunk set differs from the staged source manifest")
-    embedding_count = await connection.fetchval(
-        """
-        SELECT count(*)
-        FROM document_chunks c
-        JOIN chunk_embeddings e ON e.chunk_id=c.chunk_id
-        WHERE c.document_version_fk=$1
-        """,
-        version_pk,
-    )
-    if embedding_count != expected_count:
-        raise IncompleteVersion(
-            "Staged version must contain exactly one embedding per expected chunk"
-        )
+    # Only the selected profile is checked. Chunks may also carry embeddings
+    # from other models (e.g. a fine-tuned candidate), which must not block
+    # publication. The unique embedding identity guarantees at most one row per
+    # chunk and profile, so matching IDs prove exactly one compatible embedding.
+    # Limitation: completeness for other profiles is not verified here.
     compatible_ids = list(await connection.fetchval(
         """
         SELECT array_agg(c.chunk_id ORDER BY c.chunk_id)
