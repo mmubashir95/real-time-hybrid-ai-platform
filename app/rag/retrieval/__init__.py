@@ -10,6 +10,12 @@ from app.rag.retrieval.models import (
     SearchContextOrigin,
     TrustedSearchContext,
 )
+from app.rag.retrieval.verification import (
+    IntegritySummary,
+    RankingComparison,
+    compare_exact_ranking,
+    reconcile_import_plan,
+)
 
 __all__ = [
     "DenseRetriever",
@@ -18,8 +24,12 @@ __all__ = [
     "DenseSearchResponse",
     "DenseSearchResult",
     "HistoricalVersionScope",
+    "IntegritySummary",
+    "RankingComparison",
     "RetrievalError",
     "SearchContextOrigin",
     "TrustedSearchContext",
+    "compare_exact_ranking",
     "evaluate_against_phase5",
+    "reconcile_import_plan",
 ]

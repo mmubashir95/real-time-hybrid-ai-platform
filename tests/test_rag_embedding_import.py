@@ -35,6 +35,7 @@ from app.rag.embeddings.service import embedding_input_fingerprint
 from app.rag.ingestion.discovery import ValidatedDocument, ValidationResult
 from app.rag.ingestion.models import DocumentChunk
 from app.rag.persistence.importer import RagImportConflict, import_rag_embeddings
+from app.rag.retrieval.verification import reconcile_import_plan
 from scripts.import_rag_embeddings import main
 
 
@@ -404,6 +405,30 @@ class RagEmbeddingImportIntegrationTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(row["text"], "Exact synthetic chunk text.")
         self.assertEqual(row["dimensions"], 384)
+
+    async def test_exact_artifact_reconciliation_detects_provenance_drift(self) -> None:
+        """Verify every source identity, then report changed version metadata."""
+        plan = make_plan(status="archived")
+        await import_rag_embeddings(self.connection, plan, schema=self.schema)
+
+        verified = await reconcile_import_plan(
+            self.connection, plan, schema=self.schema
+        )
+        self.assertEqual(verified.status, "PASS")
+        self.assertEqual(verified.matching_database_embeddings, 1)
+        self.assertEqual(verified.missing_embeddings, ())
+
+        await self.connection.execute(f'SET search_path TO "{self.schema}", public')
+        await self.connection.execute(
+            "UPDATE document_versions SET title='Changed fixture title'"
+        )
+        drifted = await reconcile_import_plan(
+            self.connection, plan, schema=self.schema
+        )
+        self.assertEqual(drifted.status, "FAIL")
+        self.assertEqual(
+            drifted.relationship_mismatches, (plan.chunks[0].chunk_id,)
+        )
 
     async def test_conflicting_version_rolls_back_new_document(self) -> None:
         """Keep committed data and remove earlier writes from a failed retry."""
