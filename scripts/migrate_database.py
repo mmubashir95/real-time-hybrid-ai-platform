@@ -67,6 +67,12 @@ MIGRATIONS: tuple[Migration, ...] = (
         ROOT / "migrations" / "002_create_rag_schema.sql",
         "001",
     ),
+    Migration(
+        "003",
+        "add_document_lifecycle",
+        ROOT / "migrations" / "003_add_document_lifecycle.sql",
+        "002",
+    ),
 )
 
 

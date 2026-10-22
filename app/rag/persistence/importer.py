@@ -204,15 +204,19 @@ async def _insert_or_verify_version(
         version.pdf_pages,
         version.section_count,
         version.scope_note,
+        version.expected_chunk_count,
+        version.expected_chunk_ids_fingerprint,
     )
     inserted = await connection.fetchval(
         """
         INSERT INTO document_versions (
             document_fk, version, title, effective_date, status, visibility,
             source_sha256, source_path, source_format, synthetic, topic_family,
-            word_count, pdf_pages, section_count, scope_note
+            word_count, pdf_pages, section_count, scope_note,
+            expected_chunk_count, expected_chunk_ids_fingerprint
         ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+            $16, $17
         )
         ON CONFLICT (document_fk, version) DO NOTHING
         RETURNING id
@@ -225,7 +229,8 @@ async def _insert_or_verify_version(
         """
         SELECT id, title, effective_date, status, visibility, source_sha256,
                source_path, source_format, synthetic, topic_family, word_count,
-               pdf_pages, section_count, scope_note
+               pdf_pages, section_count, scope_note, expected_chunk_count,
+               expected_chunk_ids_fingerprint
         FROM document_versions
         WHERE document_fk=$1 AND version=$2
         """,
@@ -248,6 +253,8 @@ async def _insert_or_verify_version(
             "pdf_pages": version.pdf_pages,
             "section_count": version.section_count,
             "scope_note": version.scope_note,
+            "expected_chunk_count": version.expected_chunk_count,
+            "expected_chunk_ids_fingerprint": version.expected_chunk_ids_fingerprint,
         },
     ):
         raise RagImportConflict(

@@ -164,7 +164,8 @@ PostgreSQL failures roll back the entire import transaction. Existing committed
 application and RAG rows remain unchanged. The command never creates a database,
 drops tables, truncates rows, or modifies source artifacts.
 
-The importer has no lifecycle publication operation. Task 6.5 can reuse
-`load_import_plan` and `import_rag_embeddings` to persist a future validated
-version, but adding `staged` or `withdrawn` requires a separate approved migration.
-Current-policy retrieval and vector indexes remain later Phase 6 work.
+The importer itself does not publish versions. Task 6.5 now reuses
+`load_import_plan` and `import_rag_embeddings` to stage a validated version while
+leaving ordinary corpus-import behavior unchanged. See
+`docs/PHASE_6_5_DOCUMENT_LIFECYCLE.md`. Vector similarity search and indexes remain
+later Phase 6 work.

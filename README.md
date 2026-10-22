@@ -115,6 +115,8 @@ The project uses focused SQL migrations and a repository-native runner rather th
 a general migration framework. [`schema.sql`](schema.sql) is revision 000,
 `migrations/001_enable_pgvector.sql` enables the database-scoped extension, and
 `migrations/002_create_rag_schema.sql` creates the approved empty RAG schema.
+`migrations/003_add_document_lifecycle.sql` adds staged/withdrawn lifecycle states
+and the staged completeness contract without rewriting legacy rows.
 Successful revisions and checksums are recorded in `schema_migrations`; Compose
 runs pending migrations before the API starts. Embedding import remains Task 6.4.
 
@@ -127,10 +129,12 @@ python -m scripts.migrate_database upgrade
 See the [Phase 6.3 migration guide](docs/PHASE_6_3_DATABASE_MIGRATIONS.md) for
 backup, verification, integration-test, and recovery procedures.
 
-After the schema reaches revision 002, the existing Phase 5 artifacts can be
+After the schema reaches revision 003, the existing Phase 5 artifacts can be
 validated and transactionally imported with the repository's
 [Phase 6.4 embedding import guide](docs/PHASE_6_4_EMBEDDING_IMPORT.md). The importer
 preserves active/archived source status and safely reuses identical records.
+The [Phase 6.5 lifecycle guide](docs/PHASE_6_5_DOCUMENT_LIFECYCLE.md) documents
+staging, atomic publication, withdrawal, concurrency, and current-search scope.
 
 Both `OPENAI_API_KEY` and `DATABASE_URL` are required; startup imports remain safe,
 and requests fail with controlled service-unavailable responses when storage is not

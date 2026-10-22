@@ -57,7 +57,7 @@ class DatabaseMigrationIntegrationTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_fresh_upgrade_records_complete_history(self) -> None:
         """Provision Month 1, pgvector, and RAG objects through one command."""
-        self.assertEqual(await self.runner.upgrade(), ["000", "001", "002"])
+        self.assertEqual(await self.runner.upgrade(), ["000", "001", "002", "003"])
         await self._set_test_search_path()
 
         recorded = await self.connection.fetch(
@@ -69,6 +69,7 @@ class DatabaseMigrationIntegrationTests(unittest.IsolatedAsyncioTestCase):
                 ("000", "initial_schema"),
                 ("001", "enable_pgvector"),
                 ("002", "create_rag_schema"),
+                ("003", "add_document_lifecycle"),
             ],
         )
         tables = await self.connection.fetch(
@@ -102,7 +103,7 @@ class DatabaseMigrationIntegrationTests(unittest.IsolatedAsyncioTestCase):
             """
         )
 
-        self.assertEqual(await self.runner.upgrade(), ["000", "001", "002"])
+        self.assertEqual(await self.runner.upgrade(), ["000", "001", "002", "003"])
         await self._set_test_search_path()
         stored = await self.connection.fetchrow(
             "SELECT message, latency_ms FROM analyses WHERE id = $1", analysis_id
@@ -119,7 +120,7 @@ class DatabaseMigrationIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.runner.upgrade(), [])
         self.assertEqual(
             [(migration.version, state) for migration, state in await self.runner.status()],
-            [("000", "applied"), ("001", "applied"), ("002", "applied")],
+            [("000", "applied"), ("001", "applied"), ("002", "applied"), ("003", "applied")],
         )
         await self._set_test_search_path()
         self.assertEqual(

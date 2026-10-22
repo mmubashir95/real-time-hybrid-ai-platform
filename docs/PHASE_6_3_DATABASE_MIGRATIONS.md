@@ -11,6 +11,7 @@ redesign them or import embeddings.
 | `000` | `schema.sql` | Create the Month 1 `analyses` table | none |
 | `001` | `migrations/001_enable_pgvector.sql` | Enable database-scoped pgvector | `000` |
 | `002` | `migrations/002_create_rag_schema.sql` | Create the approved RAG tables | `001` |
+| `003` | `migrations/003_add_document_lifecycle.sql` | Add lifecycle states and staged completeness metadata | `002` |
 
 `scripts/migrate_database.py` records successful revisions in
 `public.schema_migrations` by default. Each record contains the revision, name,
@@ -57,8 +58,9 @@ python -m scripts.migrate_database status
 `checksum-mismatch`. `upgrade` executes pending revisions only; a second successful
 run prints `Applied migrations: none`.
 
-On a fresh database, revision 000 creates `analyses`, 001 enables pgvector, and
-002 creates the empty RAG schema. On an existing Month 1 database, the runner
+On a fresh database, revision 000 creates `analyses`, 001 enables pgvector, 002
+creates the empty RAG schema, and 003 adds the four-state lifecycle contract. On
+an existing Month 1 database, the runner
 validates the complete `analyses` column, primary-key, and latency-check contract
 before recording 000. It does not replace the table or modify existing rows.
 

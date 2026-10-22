@@ -40,6 +40,9 @@ from scripts.import_rag_embeddings import main
 
 ROOT = Path(__file__).resolve().parent.parent
 MIGRATION_SQL = (ROOT / "migrations" / "002_create_rag_schema.sql").read_text()
+LIFECYCLE_MIGRATION_SQL = (
+    ROOT / "migrations" / "003_add_document_lifecycle.sql"
+).read_text()
 INITIAL_SCHEMA_SQL = (ROOT / "schema.sql").read_text()
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "")
 MODEL_REVISION = "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a"
@@ -360,6 +363,7 @@ class RagEmbeddingImportIntegrationTests(unittest.IsolatedAsyncioTestCase):
         await self.connection.execute(f'SET search_path TO "{self.schema}", public')
         await self.connection.execute(INITIAL_SCHEMA_SQL)
         await self.connection.execute(MIGRATION_SQL)
+        await self.connection.execute(LIFECYCLE_MIGRATION_SQL)
 
     async def _drop_schema(self) -> None:
         """Remove only this test's generated schema."""

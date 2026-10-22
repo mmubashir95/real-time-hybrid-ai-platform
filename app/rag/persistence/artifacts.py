@@ -63,6 +63,8 @@ class VersionImport:
     pdf_pages: int | None
     section_count: int
     scope_note: str
+    expected_chunk_count: int | None = None
+    expected_chunk_ids_fingerprint: str | None = None
 
 
 @dataclass(frozen=True)
