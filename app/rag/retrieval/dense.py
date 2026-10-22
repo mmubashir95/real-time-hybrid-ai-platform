@@ -170,7 +170,7 @@ class DenseRetriever:
                         c.start_page, c.end_page, c.source_block_ids,
                         d.tenant_id, d.document_id, v.version AS document_version,
                         v.title AS document_title, v.source_path, v.source_format,
-                        v.visibility, e.embedding, e.embedding_model_id,
+                        v.visibility, v.status, v.effective_date, e.embedding, e.embedding_model_id,
                         e.embedding_model_revision, e.embedding_config_fingerprint
                     FROM documents d
                     JOIN document_versions v ON v.document_fk=d.id
@@ -188,6 +188,13 @@ class DenseRetriever:
                       AND e.encoding_config_version=$7
                       AND e.query_instruction=$12
                       AND public.vector_dims(e.embedding)=384
+                      AND ($13::text IS NULL OR d.document_id=$13)
+                      AND ($14::text IS NULL OR EXISTS (
+                          SELECT 1 FROM unnest(c.heading_path) AS heading
+                          WHERE heading=$14 OR heading LIKE ('[' || $14 || ']%')
+                      ))
+                      AND ($15::date IS NULL OR v.effective_date >= $15::date)
+                      AND ($16::date IS NULL OR v.effective_date <= $16::date)
                 )
                 -- List result columns explicitly so the stored vector is used
                 -- for ranking but never sent back with each result row.
@@ -196,7 +203,8 @@ class DenseRetriever:
                        eligible.source_block_ids, eligible.tenant_id,
                        eligible.document_id, eligible.document_version,
                        eligible.document_title, eligible.source_path,
-                       eligible.source_format, eligible.visibility,
+                       eligible.source_format, eligible.visibility, eligible.status,
+                       eligible.effective_date,
                        eligible.embedding_model_id, eligible.embedding_model_revision,
                        eligible.embedding_config_fingerprint,
                        eligible.embedding <=> $10::public.vector AS cosine_distance,
@@ -218,6 +226,10 @@ class DenseRetriever:
                 query_vector,
                 request.top_k,
                 request.profile.query_instruction,
+                request.filters.document_id,
+                request.filters.section,
+                request.filters.effective_date_from,
+                request.filters.effective_date_to,
             )
 
     @staticmethod
@@ -239,6 +251,8 @@ class DenseRetriever:
             source_path=row["source_path"],
             source_format=row["source_format"],
             visibility=row["visibility"],
+            status=row["status"],
+            effective_date=row["effective_date"].isoformat(),
             embedding_model_id=row["embedding_model_id"],
             embedding_model_revision=row["embedding_model_revision"],
             embedding_config_fingerprint=row["embedding_config_fingerprint"],

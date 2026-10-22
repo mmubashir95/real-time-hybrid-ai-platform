@@ -1,4 +1,4 @@
-"""Typed, framework-independent request and result contracts for dense search."""
+"""Typed, framework-independent contracts shared by all retrieval modes."""
 
 from __future__ import annotations
 
@@ -13,6 +13,17 @@ from app.rag.persistence.lifecycle import EmbeddingProfile
 ALLOWED_VISIBILITIES = frozenset({"public", "internal"})
 DEFAULT_TOP_K = 5
 DEFAULT_MAX_TOP_K = 100
+DEFAULT_CANDIDATE_LIMIT = 20
+DEFAULT_MAX_CANDIDATE_LIMIT = 200
+DEFAULT_MAX_QUERY_LENGTH = 2_000
+
+
+class SearchMode(str, Enum):
+    """Select one independently usable retrieval strategy."""
+
+    KEYWORD = "keyword"
+    SEMANTIC = "semantic"
+    HYBRID = "hybrid"
 
 
 class SearchContextOrigin(str, Enum):
@@ -98,6 +109,84 @@ class TrustedSearchContext:
 
 
 @dataclass(frozen=True)
+class SearchFilters:
+    """Narrow an already authorized scope without granting new access."""
+
+    document_id: str | None = None
+    section: str | None = None
+    effective_date_from: str | None = None
+    effective_date_to: str | None = None
+
+    def __post_init__(self) -> None:
+        """Reject blank values and inverted ISO-date ranges."""
+        from datetime import date
+
+        for name in ("document_id", "section"):
+            value = getattr(self, name)
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ValueError(f"{name} must be a nonempty string")
+            if isinstance(value, str) and value != value.strip():
+                raise ValueError(f"{name} must not have outer whitespace")
+        parsed_dates: list[date | None] = []
+        for name in ("effective_date_from", "effective_date_to"):
+            value = getattr(self, name)
+            if value is None:
+                parsed_dates.append(None)
+                continue
+            if not isinstance(value, str):
+                raise TypeError(f"{name} must be an ISO date string")
+            try:
+                parsed_dates.append(date.fromisoformat(value))
+            except ValueError as error:
+                raise ValueError(f"{name} must use YYYY-MM-DD") from error
+        if all(parsed_dates) and parsed_dates[0] > parsed_dates[1]:
+            raise ValueError("effective_date_from must not follow effective_date_to")
+
+
+@dataclass(frozen=True)
+class SearchRequest:
+    """Describe one validated keyword, semantic, or hybrid search."""
+
+    query: str
+    mode: SearchMode
+    filters: SearchFilters
+    k: int
+    context: TrustedSearchContext
+    profile: EmbeddingProfile | None = None
+    keyword_candidate_limit: int = DEFAULT_CANDIDATE_LIMIT
+    semantic_candidate_limit: int = DEFAULT_CANDIDATE_LIMIT
+    max_k: int = DEFAULT_MAX_TOP_K
+    max_candidate_limit: int = DEFAULT_MAX_CANDIDATE_LIMIT
+
+    def __post_init__(self) -> None:
+        """Validate the public search contract before retrieval work begins."""
+        if not isinstance(self.query, str) or not self.query.strip():
+            raise ValueError("query must be a nonempty string")
+        if len(self.query) > DEFAULT_MAX_QUERY_LENGTH:
+            raise ValueError(f"query must not exceed {DEFAULT_MAX_QUERY_LENGTH} characters")
+        if not isinstance(self.mode, SearchMode):
+            raise TypeError("mode must be a SearchMode")
+        if not isinstance(self.filters, SearchFilters):
+            raise TypeError("filters must be SearchFilters")
+        if not isinstance(self.context, TrustedSearchContext):
+            raise TypeError("context must be a TrustedSearchContext")
+        if self.mode in (SearchMode.SEMANTIC, SearchMode.HYBRID):
+            if not isinstance(self.profile, EmbeddingProfile):
+                raise TypeError("semantic and hybrid modes require an EmbeddingProfile")
+        elif self.profile is not None and not isinstance(self.profile, EmbeddingProfile):
+            raise TypeError("profile must be an EmbeddingProfile or None")
+        for name, value, maximum in (
+            ("k", self.k, self.max_k),
+            ("keyword_candidate_limit", self.keyword_candidate_limit, self.max_candidate_limit),
+            ("semantic_candidate_limit", self.semantic_candidate_limit, self.max_candidate_limit),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f"{name} must be an integer")
+            if value <= 0 or value > maximum:
+                raise ValueError(f"{name} must be between 1 and {maximum}")
+
+
+@dataclass(frozen=True)
 class DenseSearchRequest:
     """Describe one validated internal dense-search operation."""
 
@@ -107,6 +196,7 @@ class DenseSearchRequest:
     query_vector: Any | None = None
     top_k: int = DEFAULT_TOP_K
     max_top_k: int = DEFAULT_MAX_TOP_K
+    filters: SearchFilters = SearchFilters()
 
     def __post_init__(self) -> None:
         """Require exactly one query input and enforce a bounded result count."""
@@ -114,6 +204,8 @@ class DenseSearchRequest:
             raise TypeError("context must be a TrustedSearchContext")
         if not isinstance(self.profile, EmbeddingProfile):
             raise TypeError("profile must be an EmbeddingProfile")
+        if not isinstance(self.filters, SearchFilters):
+            raise TypeError("filters must be SearchFilters")
         has_question = self.question is not None
         has_vector = self.query_vector is not None
         if has_question == has_vector:
@@ -150,6 +242,8 @@ class DenseSearchResult:
     source_path: str
     source_format: str
     visibility: str
+    status: str
+    effective_date: str
     embedding_model_id: str
     embedding_model_revision: str
     embedding_config_fingerprint: str
@@ -169,3 +263,54 @@ class DenseSearchResponse:
     query_encoding_seconds: float
     database_seconds: float
     total_seconds: float
+
+
+@dataclass(frozen=True)
+class RetrievedPassage:
+    """Expose one consistent ranked passage with complete source attribution."""
+
+    chunk_id: str
+    document_id: str
+    document_version: str
+    tenant_id: str
+    title: str
+    section: tuple[str, ...]
+    start_page: int | None
+    end_page: int | None
+    text: str
+    source_reference: str
+    source_format: str
+    source_block_ids: tuple[int, ...]
+    status: str
+    visibility: str
+    effective_date: str
+    retrieval_mode: SearchMode
+    final_rank: int
+    bm25_score: float | None = None
+    bm25_rank: int | None = None
+    semantic_score: float | None = None
+    semantic_rank: int | None = None
+    fusion_score: float | None = None
+
+
+@dataclass(frozen=True)
+class SearchDiagnostics:
+    """Report measured branch counts and latency without passage content."""
+
+    keyword_candidates: int
+    semantic_candidates: int
+    fused_candidates: int
+    returned_count: int
+    keyword_seconds: float
+    query_embedding_seconds: float
+    vector_search_seconds: float
+    fusion_seconds: float
+    total_seconds: float
+
+
+@dataclass(frozen=True)
+class SearchResponse:
+    """Return consistent passages and safe operational diagnostics."""
+
+    results: tuple[RetrievedPassage, ...]
+    diagnostics: SearchDiagnostics
