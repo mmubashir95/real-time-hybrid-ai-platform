@@ -23,10 +23,11 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from app.rag.embeddings.encoder import SentenceTransformerEncoder  # noqa: E402
 from app.rag.embeddings.models import EmbeddingConfig  # noqa: E402
+from app.rag.embeddings.service import question_search_scope  # noqa: E402
 from app.rag.persistence.lifecycle import EmbeddingProfile  # noqa: E402
 from app.rag.retrieval import (  # noqa: E402
-    DenseRetriever, KeywordRetriever, RetrievalService, SearchContextOrigin,
-    SearchFilters, SearchMode, SearchRequest, TrustedSearchContext,
+    DenseRetriever, HistoricalVersionScope, KeywordRetriever, RetrievalService,
+    SearchContextOrigin, SearchFilters, SearchMode, SearchRequest, TrustedSearchContext,
 )
 from app.rag.retrieval.metrics import (  # noqa: E402
     EvaluationExample, latency_percentiles, mrr_at_k, ndcg_at_k, recall_at_k,
@@ -71,6 +72,27 @@ def _load_questions(path: Path, split: str, allow_unreviewed: bool) -> list[dict
     return rows
 
 
+def _question_context(
+    row: dict[str, str], visibilities: tuple[str, ...]
+) -> TrustedSearchContext:
+    """Build the trusted scope for one question, matching the Phase 5/6 convention.
+
+    Only explicitly historical questions are authorized for their exact archived
+    version; every other question searches active documents in its tenant, so
+    gold labels never narrow ordinary candidate sets.
+    """
+    document_id, version = question_search_scope(row)
+    historical = (
+        HistoricalVersionScope(document_id, version)
+        if document_id is not None and version is not None
+        else None
+    )
+    return TrustedSearchContext(
+        row["tenant_id"], visibilities, SearchContextOrigin.INTERNAL,
+        historical, historical is not None,
+    )
+
+
 def _section_key(headings: tuple[str, ...]) -> str:
     """Resolve the source section marker used by the frozen label bank."""
     for heading in reversed(headings):
@@ -111,9 +133,8 @@ async def _evaluate(arguments: argparse.Namespace) -> dict[str, object]:
         empty_counts = {mode: 0 for mode in SearchMode}
         security_violations = {mode: 0 for mode in SearchMode}
         for row in rows:
-            context = TrustedSearchContext(
-                row["tenant_id"], tuple(arguments.visibility or ("public", "internal")),
-                SearchContextOrigin.INTERNAL,
+            context = _question_context(
+                row, tuple(arguments.visibility or ("public", "internal"))
             )
             no_answer = row["expected_no_answer"].strip().lower() == "true"
             gold = frozenset() if no_answer else frozenset((
@@ -166,7 +187,10 @@ async def _evaluate(arguments: argparse.Namespace) -> dict[str, object]:
             "vector_index": "exact pgvector cosine distance",
             "candidate_limit": arguments.candidate_limit,
             "rrf_constant": 60,
-            "filter_policy": "verified tenant + permitted visibility + active versions",
+            "filter_policy": (
+                "verified tenant + permitted visibility + active versions; "
+                "version_conflict questions use their exact archived version"
+            ),
         },
         "metrics": metrics,
     }

@@ -96,6 +96,24 @@ class EvaluateCliTests(unittest.TestCase):
             self.assertIn("not reviewed", errors.getvalue())
             self.assertFalse(output.exists())
 
+    def test_only_version_conflict_questions_get_historical_scope(self) -> None:
+        """Authorize the exact archived gold version for historical questions only."""
+        row = {
+            "tenant_id": "asterdesk", "question_type": "version_conflict",
+            "gold_document_id": "AST-REF-001", "gold_version": "1.0",
+        }
+        context = evaluate_cli._question_context(row, ("public",))
+        self.assertTrue(context.historical_access)
+        self.assertEqual(
+            (context.historical.document_id, context.historical.version),
+            ("AST-REF-001", "1.0"),
+        )
+        ordinary = evaluate_cli._question_context(
+            {**row, "question_type": "direct"}, ("public",)
+        )
+        self.assertIsNone(ordinary.historical)
+        self.assertFalse(ordinary.historical_access)
+
     def test_unknown_split_fails(self) -> None:
         """Report an empty split instead of producing empty metrics."""
         with unittest.mock.patch("sys.stderr", io.StringIO()) as errors:
