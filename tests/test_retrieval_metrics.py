@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from math import log2
 import unittest
 
 from app.rag.retrieval.metrics import (
@@ -25,6 +26,16 @@ class RetrievalMetricTests(unittest.TestCase):
         self.assertEqual(recall_at_k(examples, 2), 0.5)
         self.assertEqual(mrr_at_k(examples, 10), 0.5)
         self.assertGreater(ndcg_at_k(examples, 10), 0.6)
+
+    def test_ndcg_credits_each_relevant_source_once(self) -> None:
+        """Keep NDCG within [0, 1] when several chunks share one gold anchor."""
+        a = ("tenant", "DOC-A", "1.0")
+        x = ("tenant", "DOC-X", "1.0")
+        self.assertEqual(ndcg_at_k((EvaluationExample((a, a, a), frozenset((a,))),), 10), 1.0)
+        self.assertAlmostEqual(
+            ndcg_at_k((EvaluationExample((x, a, a), frozenset((a,))),), 10),
+            1.0 / log2(3),
+        )
 
     def test_no_answer_rows_are_excluded_from_relevance_metrics(self) -> None:
         """Avoid mathematically invalid recall claims for unanswerable questions."""

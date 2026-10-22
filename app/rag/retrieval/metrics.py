@@ -56,11 +56,14 @@ def ndcg_at_k(examples: tuple[EvaluationExample, ...], k: int) -> float:
         raise ValueError("NDCG requires at least one labeled answerable example")
     values: list[float] = []
     for example in answerable:
-        dcg = sum(
-            1.0 / log2(rank + 1)
-            for rank, source in enumerate(example.ranked_sources[:k], start=1)
-            if source in example.relevant_sources
-        )
+        # Several chunks can map to one source anchor; only its first
+        # occurrence earns gain so DCG cannot exceed the ideal DCG.
+        dcg = 0.0
+        credited: set[tuple[str, ...]] = set()
+        for rank, source in enumerate(example.ranked_sources[:k], start=1):
+            if source in example.relevant_sources and source not in credited:
+                credited.add(source)
+                dcg += 1.0 / log2(rank + 1)
         ideal_count = min(k, len(example.relevant_sources))
         ideal = sum(1.0 / log2(rank + 1) for rank in range(1, ideal_count + 1))
         values.append(dcg / ideal)
