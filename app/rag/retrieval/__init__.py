@@ -1,7 +1,6 @@
 """Public contracts and service entry points for exact dense retrieval."""
 
 from app.rag.retrieval.dense import DenseRetriever, RetrievalError
-from app.rag.retrieval.evaluation import DenseEvaluationReport, evaluate_against_phase5
 from app.rag.retrieval.models import (
     DenseSearchRequest,
     DenseSearchResponse,
@@ -19,7 +18,6 @@ from app.rag.retrieval.verification import (
 
 __all__ = [
     "DenseRetriever",
-    "DenseEvaluationReport",
     "DenseSearchRequest",
     "DenseSearchResponse",
     "DenseSearchResult",
@@ -30,6 +28,5 @@ __all__ = [
     "SearchContextOrigin",
     "TrustedSearchContext",
     "compare_exact_ranking",
-    "evaluate_against_phase5",
     "reconcile_import_plan",
 ]

@@ -259,23 +259,22 @@ async def _evaluate(arguments: argparse.Namespace) -> tuple[dict[str, Any], list
                 profile=profile,
                 top_k=arguments.top_k,
             )
-            production_context = _context(question, production_visibilities)
-            if production_context == matched_context:
-                production_ids = comparison.database_chunk_ids
-                production_database_seconds = comparison.database_seconds
-                production_total_seconds = comparison.total_seconds
-            else:
-                production_response = await retriever.search(
-                    DenseSearchRequest(
-                        context=production_context, profile=profile,
-                        query_vector=query_vector, top_k=arguments.top_k,
-                    )
+            # Always run and time the production search on its own. Reusing the
+            # matched-scope comparison would fold NumPy reference time into
+            # the reported retrieval latency.
+            production_response = await retriever.search(
+                DenseSearchRequest(
+                    context=_context(question, production_visibilities),
+                    profile=profile,
+                    query_vector=query_vector,
+                    top_k=arguments.top_k,
                 )
-                production_ids = tuple(
-                    item.chunk_id for item in production_response.results
-                )
-                production_database_seconds = production_response.database_seconds
-                production_total_seconds = production_response.total_seconds
+            )
+            production_ids = tuple(
+                item.chunk_id for item in production_response.results
+            )
+            production_database_seconds = production_response.database_seconds
+            production_total_seconds = production_response.total_seconds
             evaluated += 1
             exact_matches += int(comparison.exact_order_match)
             explained_ties += int(

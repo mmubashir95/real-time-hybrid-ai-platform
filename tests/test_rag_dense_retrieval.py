@@ -24,6 +24,9 @@ from app.rag.retrieval import (
 
 
 ROOT = Path(__file__).resolve().parent.parent
+# Migration 001 is database-scoped; applying it here lets each suite run on
+# a fresh database instead of relying on the migration tests running first.
+PGVECTOR_SQL = (ROOT / "migrations/001_enable_pgvector.sql").read_text()
 RAG_SCHEMA_SQL = (ROOT / "migrations/002_create_rag_schema.sql").read_text()
 LIFECYCLE_SQL = (ROOT / "migrations/003_add_document_lifecycle.sql").read_text()
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "")
@@ -160,6 +163,7 @@ class DenseSearchPostgresTests(unittest.IsolatedAsyncioTestCase):
         self.connection = await asyncpg.connect(
             url.set(drivername="postgresql").render_as_string(hide_password=False)
         )
+        await self.connection.execute(PGVECTOR_SQL)
         self.schema = f"dense_{uuid4().hex}"
         await self.connection.execute(f'CREATE SCHEMA "{self.schema}"')
         await self.connection.execute(f'SET search_path TO "{self.schema}", public')

@@ -189,7 +189,16 @@ class DenseRetriever:
                       AND e.query_instruction=$12
                       AND public.vector_dims(e.embedding)=384
                 )
-                SELECT eligible.*,
+                -- List result columns explicitly so the stored vector is used
+                -- for ranking but never sent back with each result row.
+                SELECT eligible.chunk_id, eligible.chunk_text, eligible.heading_path,
+                       eligible.start_page, eligible.end_page,
+                       eligible.source_block_ids, eligible.tenant_id,
+                       eligible.document_id, eligible.document_version,
+                       eligible.document_title, eligible.source_path,
+                       eligible.source_format, eligible.visibility,
+                       eligible.embedding_model_id, eligible.embedding_model_revision,
+                       eligible.embedding_config_fingerprint,
                        eligible.embedding <=> $10::public.vector AS cosine_distance,
                        1 - (eligible.embedding <=> $10::public.vector) AS similarity,
                        count(*) OVER () AS candidate_count

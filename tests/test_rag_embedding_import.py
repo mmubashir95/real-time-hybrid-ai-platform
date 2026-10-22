@@ -40,6 +40,9 @@ from scripts.import_rag_embeddings import main
 
 
 ROOT = Path(__file__).resolve().parent.parent
+# Migration 001 is database-scoped; applying it here lets each suite run on
+# a fresh database instead of relying on the migration tests running first.
+PGVECTOR_SQL = (ROOT / "migrations/001_enable_pgvector.sql").read_text()
 MIGRATION_SQL = (ROOT / "migrations" / "002_create_rag_schema.sql").read_text()
 LIFECYCLE_MIGRATION_SQL = (
     ROOT / "migrations" / "003_add_document_lifecycle.sql"
@@ -358,6 +361,7 @@ class RagEmbeddingImportIntegrationTests(unittest.IsolatedAsyncioTestCase):
         except OSError:
             self.skipTest("Disposable PostgreSQL database is unreachable")
         self.addAsyncCleanup(self.connection.close)
+        await self.connection.execute(PGVECTOR_SQL)
         self.schema = f"rag_import_test_{uuid4().hex}"
         await self.connection.execute(f'CREATE SCHEMA "{self.schema}"')
         self.addAsyncCleanup(self._drop_schema)
