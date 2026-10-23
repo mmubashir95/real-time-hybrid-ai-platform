@@ -138,8 +138,10 @@ async def _evaluate(arguments: argparse.Namespace) -> dict[str, object]:
                 arguments.candidate_limit, arguments.candidate_limit,
             ))
             # This is the single frozen candidate set used for both rankings.
+            # Keep the full reranked order (every candidate is scored anyway) so
+            # @10 metrics see ranks 6-10 instead of silently collapsing to @5.
             reranked = await asyncio.to_thread(
-                reranker.rerank, row["query"], response.results, arguments.top_k
+                reranker.rerank, row["query"], response.results, arguments.candidate_limit
             )
             no_answer = row["expected_no_answer"].strip().lower() == "true"
             gold = frozenset() if no_answer else frozenset((
@@ -148,7 +150,8 @@ async def _evaluate(arguments: argparse.Namespace) -> dict[str, object]:
             baseline_sources = tuple(_source_key(item) for item in response.results)
             reranked_sources = tuple(_source_key(item.passage) for item in reranked.results)
             candidate_examples.append(EvaluationExample(baseline_sources, gold))
-            baseline_examples.append(EvaluationExample(baseline_sources[:arguments.top_k], gold))
+            # Metric functions slice to their own k; both arms keep full order.
+            baseline_examples.append(EvaluationExample(baseline_sources, gold))
             reranked_examples.append(EvaluationExample(reranked_sources, gold))
             retrieval_latencies.append(response.diagnostics.total_seconds)
             combined_latencies.append(response.diagnostics.total_seconds + reranked.diagnostics.inference_seconds)

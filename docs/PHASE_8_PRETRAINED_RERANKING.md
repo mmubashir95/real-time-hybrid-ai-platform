@@ -131,6 +131,9 @@ current labels are still `synthetic_seed_needs_review`:
 
 Without `--allow-unreviewed-labels`, the evaluator refuses the current dataset.
 Both baselines use the exact same candidate list retrieved once per question.
+Both arms keep the full ordering of every candidate (the reranker scores all of
+them anyway), so @10 metrics really cover ranks 6-10; `--top-k` is recorded
+in the report but does not truncate the evaluated rankings.
 The report includes frozen chunk IDs, Recall@5, MRR@10, NDCG@5/10, candidate
 Recall@20, p50/p95 latency, truncation count, and authorization violations.
 Peak memory is reported as `NOT MEASURED` until a reliable platform-specific

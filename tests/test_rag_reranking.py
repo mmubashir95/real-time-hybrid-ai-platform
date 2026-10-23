@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import threading
 import unittest
 
 from app.rag.persistence.lifecycle import EmbeddingProfile
@@ -204,6 +206,30 @@ class FakeRetrieval:
         return self.response
 
 
+class BlockingScorer:
+    """Block inference until released and track overlapping score calls."""
+
+    def __init__(self) -> None:
+        """Start with no recorded or active inference."""
+        self.config = RerankerConfig(local_files_only=True)
+        self.model_load_seconds = 0.0
+        self.started = threading.Event()
+        self.release = threading.Event()
+        self.calls = 0
+        self.active = 0
+        self.max_active = 0
+
+    def score(self, query: str, passages) -> tuple[PairScore, ...]:
+        """Record concurrency, then wait until the test releases inference."""
+        self.calls += 1
+        self.active += 1
+        self.max_active = max(self.max_active, self.active)
+        self.started.set()
+        self.release.wait(5)
+        self.active -= 1
+        return (PairScore(1.0, 10, False),)
+
+
 class RetrievalRerankingServiceTests(unittest.IsolatedAsyncioTestCase):
     """Verify Phase 7 candidates flow unchanged into Phase 8."""
 
@@ -220,6 +246,33 @@ class RetrievalRerankingServiceTests(unittest.IsolatedAsyncioTestCase):
         self.assertIs(original, retrieval.response)
         self.assertEqual(len(retrieval.requests), 1)
         self.assertIs(reranked.results[0].passage, candidates[1])
+
+    async def test_concurrent_reranks_are_bounded_and_queued_cancellation_skips_inference(self) -> None:
+        """Hold at most one inference thread; a request cancelled while queued never scores."""
+        candidates = (passage("a", 1),)
+        scorer = BlockingScorer()
+        service = RetrievalRerankingService(FakeRetrieval(candidates), RerankingService(scorer))
+        request = SearchRequest("refund", SearchMode.HYBRID, SearchFilters(), 1, CONTEXT, PROFILE)
+
+        first = asyncio.create_task(service.search(request, top_k=1))
+        await asyncio.to_thread(scorer.started.wait, 5)
+        queued = [asyncio.create_task(service.search(request, top_k=1)) for _ in range(3)]
+        await asyncio.sleep(0.05)
+        self.assertEqual(scorer.calls, 1)  # Queued requests wait on the loop, not in threads.
+
+        queued[0].cancel()
+        scorer.release.set()
+        await first
+        await asyncio.gather(*queued, return_exceptions=True)
+        self.assertTrue(queued[0].cancelled())
+        self.assertEqual(scorer.calls, 3)  # First request plus the two that were not cancelled.
+        self.assertEqual(scorer.max_active, 1)
+
+    def test_invalid_concurrency_limit_is_rejected(self) -> None:
+        """Reject limits that would disable or break the inference bound."""
+        for limit, error in ((0, ValueError), (True, TypeError)):
+            with self.assertRaises(error):
+                RetrievalRerankingService(FakeRetrieval(()), RerankingService(FakeScorer(())), limit)
 
     async def test_nonhybrid_mode_is_rejected_before_retrieval(self) -> None:
         """Keep the integrated workflow scoped to the specified hybrid baseline."""

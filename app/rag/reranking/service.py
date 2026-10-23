@@ -26,6 +26,11 @@ from app.rag.retrieval.models import (
 from app.rag.retrieval.service import RetrievalService
 
 
+# One model instance runs one inference at a time, so more slots only add
+# threads blocked on the model lock.
+DEFAULT_MAX_CONCURRENT_RERANKS = 1
+
+
 class PassageScorer(Protocol):
     """Describe the small inference boundary used by deterministic tests."""
 
@@ -130,10 +135,24 @@ class RerankingService:
 class RetrievalRerankingService:
     """Compose existing hybrid retrieval with an optional Phase 8 rerank step."""
 
-    def __init__(self, retrieval: RetrievalService, reranker: RerankingService) -> None:
-        """Bind existing Phase 7 and Phase 8 services without duplicating either."""
+    def __init__(
+        self,
+        retrieval: RetrievalService,
+        reranker: RerankingService,
+        max_concurrent_reranks: int = DEFAULT_MAX_CONCURRENT_RERANKS,
+    ) -> None:
+        """Bind existing Phase 7 and Phase 8 services without duplicating either.
+
+        max_concurrent_reranks bounds how many worker threads may run or wait
+        on reranker inference at once; extra requests wait on the event loop.
+        """
+        if isinstance(max_concurrent_reranks, bool) or not isinstance(max_concurrent_reranks, int):
+            raise TypeError("max_concurrent_reranks must be an integer")
+        if max_concurrent_reranks <= 0:
+            raise ValueError("max_concurrent_reranks must be positive")
         self._retrieval = retrieval
         self._reranker = reranker
+        self._rerank_slots = asyncio.Semaphore(max_concurrent_reranks)
 
     async def search(
         self, request: SearchRequest, *, top_k: int = DEFAULT_RERANK_TOP_K,
@@ -145,8 +164,15 @@ class RetrievalRerankingService:
             raise ValueError("Hybrid candidate k must be greater than or equal to rerank top_k")
         retrieval_response = await self._retrieval.search(request)
         # Transformer inference is blocking; keep it off the async database event loop.
-        rerank_response = await asyncio.to_thread(
-            self._reranker.rerank, request.query, retrieval_response.results, top_k
-        )
+        # The model lock already serializes inference, so without this bound every
+        # extra request would park an executor thread on that lock. Waiting here
+        # instead is cheap and cancellable: a request cancelled before its slot
+        # never starts inference. A cancelled request that already holds a slot
+        # cannot interrupt its worker thread; inference finishes and the slot is
+        # released when the thread returns.
+        async with self._rerank_slots:
+            rerank_response = await asyncio.to_thread(
+                self._reranker.rerank, request.query, retrieval_response.results, top_k
+            )
         return retrieval_response, rerank_response
 
