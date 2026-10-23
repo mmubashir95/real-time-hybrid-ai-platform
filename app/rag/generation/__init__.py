@@ -15,6 +15,7 @@ from app.rag.generation.models import (
     GenerationPipelineError,
     GenerationStatus,
     LlmGenerationResult,
+    LlmStructuredResult,
     RagAnswerResponse,
     TokenUsage,
 )
@@ -32,6 +33,7 @@ __all__ = [
     "GenerationPipelineError",
     "GenerationStatus",
     "LlmGenerationResult",
+    "LlmStructuredResult",
     "OpenAIResponsesClient",
     "RagAnswerResponse",
     "RagGenerationService",

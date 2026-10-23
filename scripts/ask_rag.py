@@ -27,6 +27,7 @@ from app.rag.generation import (  # noqa: E402
     OpenAIResponsesClient,
     RagGenerationService,
 )
+from app.rag.grounding import GroundedRagService, GroundingStatus  # noqa: E402
 from app.rag.persistence.lifecycle import EmbeddingProfile  # noqa: E402
 from app.rag.reranking import (  # noqa: E402
     Qwen3Reranker,
@@ -71,6 +72,12 @@ def parse_args(arguments: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--max-length", type=int, default=8192)
     parser.add_argument("--local-files-only", action="store_true")
+    parser.add_argument(
+        "--mode",
+        choices=("grounded", "ungrounded"),
+        default="grounded",
+        help="Use Phase 10 verification or retain the Phase 9 comparison path.",
+    )
     return parser.parse_args(arguments)
 
 
@@ -164,6 +171,75 @@ def _print_response(response, output: TextIO) -> None:
     print("FINAL STATUS: PASSED", file=output)
 
 
+def _format_optional_tokens(usage) -> str:
+    """Render provider usage without inventing unavailable token values."""
+    if usage is None:
+        return "unavailable"
+    return (
+        f"input={usage.input_tokens} cached={usage.cached_input_tokens} "
+        f"output={usage.output_tokens} total={usage.total_tokens}"
+    )
+
+
+def _print_grounded_response(response, output: TextIO) -> None:
+    """Print Phase 10 claims, citations, grounding decisions, and measurements."""
+    print("=" * 64, file=output)
+    print("PHASE 10 — GROUNDED RAG ANSWER", file=output)
+    print("=" * 64, file=output)
+    print(f"Grounding status: {response.status.value}", file=output)
+    print(f"Generation model: {response.generation_model}", file=output)
+    print(f"Verification model: {response.verification_model or 'not called'}", file=output)
+    print("\nANSWER", file=output)
+    print(response.answer, file=output)
+    print("\nCITATIONS", file=output)
+    if not response.citations:
+        print("  (none)", file=output)
+    for citation in response.citations:
+        section = " > ".join(citation.section) or "(root)"
+        if citation.start_page is None:
+            page = "page unavailable"
+        elif citation.end_page in (None, citation.start_page):
+            page = f"page {citation.start_page}"
+        else:
+            page = f"pages {citation.start_page}-{citation.end_page}"
+        print(
+            f"  [{citation.citation_number}] {citation.document_id} "
+            f"v{citation.document_version} | {section} | {page}",
+            file=output,
+        )
+        print(f"      Chunk: {citation.chunk_id} ({citation.evidence_id})", file=output)
+    diagnostics = response.grounding
+    print("\nGROUNDING DIAGNOSTICS", file=output)
+    print(f"  Claims generated: {diagnostics.generated_claim_count}", file=output)
+    print(f"  Claims verified: {diagnostics.verified_claim_count}", file=output)
+    print(f"  Claims supported: {diagnostics.supported_claim_count}", file=output)
+    print(f"  Claims unsupported: {diagnostics.unsupported_claim_count}", file=output)
+    print(f"  Claims contradicted: {diagnostics.contradicted_claim_count}", file=output)
+    print(f"  Invalid citations: {diagnostics.invalid_citation_count}", file=output)
+    print(f"  Limitation: {diagnostics.verification_limitation}", file=output)
+    print("\nPERFORMANCE", file=output)
+    print(
+        f"  Latency ms: retrieval={response.latency.retrieval_ms:.3f} "
+        f"reranking={response.latency.reranking_ms:.3f} "
+        f"generation={response.latency.generation_ms:.3f} "
+        f"verification={response.latency.verification_ms if response.latency.verification_ms is not None else 'not measured'} "
+        f"total={response.latency.total_ms:.3f}",
+        file=output,
+    )
+    print("\nUSAGE", file=output)
+    print(f"  Generation tokens: {_format_optional_tokens(response.generation_usage)}", file=output)
+    print(f"  Verification tokens: {_format_optional_tokens(response.verification_usage)}", file=output)
+    known_costs = [
+        item.estimated_cost_usd
+        for item in (response.generation_cost, response.verification_cost)
+        if item is not None
+    ]
+    cost_label = f"{sum(known_costs):.10f}" if len(known_costs) == response.request_count else "unavailable"
+    print(f"  Estimated total API cost (USD): {cost_label}", file=output)
+    final = "PASSED" if response.status == GroundingStatus.GROUNDED else "FAILED"
+    print(f"FINAL STATUS: {final}", file=output)
+
+
 async def _run(arguments: argparse.Namespace, output: TextIO) -> None:
     """Create reusable clients and execute one end-to-end generation request."""
     settings = load_rag_generation_settings()
@@ -189,10 +265,11 @@ async def _run(arguments: argparse.Namespace, output: TextIO) -> None:
             retrieval,
             RerankingService(Qwen3Reranker(reranker_config)),
         )
-        service = RagGenerationService(
-            pipeline,
-            OpenAIResponsesClient(settings),
-            settings,
+        client = OpenAIResponsesClient(settings)
+        service = (
+            GroundedRagService(pipeline, client, settings)
+            if arguments.mode == "grounded"
+            else RagGenerationService(pipeline, client, settings)
         )
         response = await service.answer_question(
             request,
@@ -201,7 +278,10 @@ async def _run(arguments: argparse.Namespace, output: TextIO) -> None:
         )
     finally:
         await connection.close()
-    _print_response(response, output)
+    if arguments.mode == "grounded":
+        _print_grounded_response(response, output)
+    else:
+        _print_response(response, output)
 
 
 def main(

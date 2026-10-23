@@ -5,10 +5,11 @@ from __future__ import annotations
 import asyncio
 import logging
 from time import perf_counter
-from typing import Protocol
+from typing import Protocol, TypeVar
 
 import openai
 from openai import AsyncOpenAI
+from pydantic import BaseModel
 
 from app.config import RagGenerationSettings
 from app.rag.generation.models import (
@@ -19,6 +20,7 @@ from app.rag.generation.models import (
     GPT5_NANO_INPUT_USD_PER_MILLION,
     GPT5_NANO_OUTPUT_USD_PER_MILLION,
     LlmGenerationResult,
+    LlmStructuredResult,
     TokenUsage,
 )
 
@@ -33,6 +35,7 @@ class ResponsesClient(Protocol):
 
 
 PRICED_MODEL_PREFIX = "gpt-5-nano"
+StructuredOutput = TypeVar("StructuredOutput", bound=BaseModel)
 
 
 def estimate_cost(usage: TokenUsage | None, model: str) -> CostEstimate | None:
@@ -199,6 +202,96 @@ class OpenAIResponsesClient:
             logger.info(
                 "performance request_id=%s operation=rag_generation model=%s "
                 "latency_ms=%.3f status=%s",
+                request_id,
+                self.settings.openai_model,
+                (perf_counter() - started) * 1000,
+                status,
+            )
+
+    async def generate_structured(
+        self,
+        system_instruction: str,
+        user_message: str,
+        output_model: type[StructuredOutput],
+        *,
+        request_id: str = "-",
+        max_output_tokens: int | None = None,
+    ) -> LlmStructuredResult[StructuredOutput]:
+        """Generate and validate provider-native structured output.
+
+        This deliberately shares Phase 9's client, limits, retries, model,
+        usage validation, and cost accounting instead of adding a second client.
+        """
+        if not system_instruction.strip() or not user_message.strip():
+            raise ValueError("Generation instructions and input must not be empty")
+        started = perf_counter()
+        status = "error"
+        try:
+            async with self._request_slots:
+                response = await self._client.responses.parse(
+                    model=self.settings.openai_model,
+                    instructions=system_instruction,
+                    input=user_message,
+                    text_format=output_model,
+                    max_output_tokens=max_output_tokens or self.settings.max_output_tokens,
+                    reasoning={"effort": self.settings.reasoning_effort},
+                    store=False,
+                )
+            if response.status != "completed":
+                raise GenerationPipelineError(
+                    GenerationErrorCode.GENERATION_ERROR,
+                    "OpenAI structured generation did not complete.",
+                )
+            parsed = getattr(response, "output_parsed", None)
+            if not isinstance(parsed, output_model):
+                raise GenerationPipelineError(
+                    GenerationErrorCode.GENERATION_ERROR,
+                    "OpenAI returned invalid structured output.",
+                )
+            usage = _usage_from_response(response.usage)
+            status = "success"
+            return LlmStructuredResult(
+                output=parsed,
+                model=response.model,
+                provider_response_id=getattr(response, "id", None),
+                usage=usage,
+                cost=estimate_cost(usage, response.model),
+                latency_ms=(perf_counter() - started) * 1000,
+            )
+        except asyncio.CancelledError:
+            status = "cancelled"
+            raise
+        except GenerationPipelineError:
+            raise
+        except openai.APITimeoutError as error:
+            raise GenerationPipelineError(
+                GenerationErrorCode.LLM_PROVIDER_ERROR,
+                "OpenAI structured generation timed out.",
+            ) from error
+        except (openai.AuthenticationError, openai.PermissionDeniedError) as error:
+            raise GenerationPipelineError(
+                GenerationErrorCode.LLM_CONFIGURATION_ERROR,
+                "OpenAI credentials or model access are invalid.",
+            ) from error
+        except (openai.RateLimitError, openai.APIConnectionError) as error:
+            raise GenerationPipelineError(
+                GenerationErrorCode.LLM_PROVIDER_ERROR,
+                "OpenAI structured generation is temporarily unavailable.",
+            ) from error
+        except openai.BadRequestError as error:
+            raise GenerationPipelineError(
+                GenerationErrorCode.LLM_CONFIGURATION_ERROR,
+                "OpenAI rejected the structured generation configuration.",
+            ) from error
+        except openai.APIError as error:
+            raise GenerationPipelineError(
+                GenerationErrorCode.LLM_PROVIDER_ERROR,
+                "OpenAI structured generation failed.",
+            ) from error
+        finally:
+            logger.info(
+                "performance request_id=%s operation=rag_structured_generation "
+                "model=%s latency_ms=%.3f status=%s",
                 request_id,
                 self.settings.openai_model,
                 (perf_counter() - started) * 1000,

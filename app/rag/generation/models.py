@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from math import isfinite
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -154,3 +155,23 @@ class LlmGenerationResult:
         """Reject impossible timing before it reaches the public contract."""
         if not isfinite(self.latency_ms) or self.latency_ms < 0:
             raise ValueError("Generation latency must be finite and nonnegative")
+
+
+StructuredOutput = TypeVar("StructuredOutput", bound=BaseModel)
+
+
+@dataclass(frozen=True)
+class LlmStructuredResult(Generic[StructuredOutput]):
+    """Represent one provider-native parsed response with measured accounting."""
+
+    output: StructuredOutput
+    model: str
+    provider_response_id: str | None
+    usage: TokenUsage | None
+    cost: CostEstimate | None
+    latency_ms: float
+
+    def __post_init__(self) -> None:
+        """Reject impossible timing before orchestration consumes the result."""
+        if not isfinite(self.latency_ms) or self.latency_ms < 0:
+            raise ValueError("Structured generation latency must be finite and nonnegative")

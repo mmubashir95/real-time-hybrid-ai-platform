@@ -10,6 +10,7 @@ import openai
 
 from app.config import RagGenerationSettings
 from app.rag.generation.models import GenerationErrorCode, GenerationPipelineError, TokenUsage
+from app.rag.grounding.models import GroundedDraft, GroundingStatus
 from app.rag.generation.openai_client import OpenAIResponsesClient, estimate_cost
 
 
@@ -103,6 +104,23 @@ class OpenAIResponsesClientTests(unittest.IsolatedAsyncioTestCase):
         result = await self.client.generate("system", "user")
         self.assertIsNone(result.usage)
         self.assertIsNone(result.cost)
+
+    async def test_structured_response_uses_provider_native_parse(self) -> None:
+        """Reuse the provider client while requiring a validated Pydantic output."""
+        parsed = GroundedDraft(status=GroundingStatus.INSUFFICIENT_EVIDENCE)
+        self.sdk.responses.parse = AsyncMock(return_value=SimpleNamespace(
+            status="completed", output_parsed=parsed, usage=None,
+            model="gpt-5-nano-test", id="resp_structured",
+        ))
+        result = await self.client.generate_structured(
+            "system", "user", GroundedDraft, max_output_tokens=128
+        )
+        self.assertIs(result.output, parsed)
+        self.sdk.responses.parse.assert_awaited_once_with(
+            model="gpt-5-nano", instructions="system", input="user",
+            text_format=GroundedDraft, max_output_tokens=128,
+            reasoning={"effort": "minimal"}, store=False,
+        )
 
     async def test_incomplete_empty_and_malformed_usage_are_rejected(self) -> None:
         """Never report incomplete or malformed provider output as generated."""
