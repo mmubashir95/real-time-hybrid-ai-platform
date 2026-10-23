@@ -2,7 +2,13 @@ import os
 import unittest
 from unittest.mock import patch
 
-from app.config import ConfigurationError, Settings, load_settings
+from app.config import (
+    ConfigurationError,
+    RagGenerationSettings,
+    Settings,
+    load_rag_generation_settings,
+    load_settings,
+)
 
 
 class SettingsTests(unittest.TestCase):
@@ -68,6 +74,60 @@ class SettingsTests(unittest.TestCase):
                 database_url=environment["DATABASE_URL"],
             ),
         )
+
+
+class RagGenerationSettingsTests(unittest.TestCase):
+    """Validate Phase 9 cost and token-control environment settings."""
+
+    def test_defaults_are_low_cost_and_public_only(self) -> None:
+        """Load the selected model and conservative external-data policy."""
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True):
+            settings = load_rag_generation_settings()
+        self.assertEqual(settings.openai_model, "gpt-5-nano")
+        self.assertEqual(settings.reasoning_effort, "minimal")
+        self.assertEqual(settings.externally_allowed_visibilities, ("public",))
+
+    def test_complete_generation_settings_are_loaded(self) -> None:
+        """Accept explicit token, timeout, model, and visibility configuration."""
+        environment = {
+            "OPENAI_API_KEY": "test-key",
+            "OPENAI_MODEL": "gpt-5-nano-2025-08-07",
+            "OPENAI_TIMEOUT_SECONDS": "12.5",
+            "OPENAI_MAX_OUTPUT_TOKENS": "300",
+            "RAG_MAX_CONTEXT_TOKENS": "1000",
+            "RAG_MAX_GENERATION_INPUT_TOKENS": "2000",
+            "OPENAI_REASONING_EFFORT": "low",
+            "OPENAI_MAX_CONCURRENT_REQUESTS": "3",
+            "RAG_EXTERNAL_ALLOWED_VISIBILITIES": "public,internal",
+        }
+        with patch.dict(os.environ, environment, clear=True):
+            loaded = load_rag_generation_settings()
+        self.assertEqual(
+            loaded,
+            RagGenerationSettings(
+                "test-key", "gpt-5-nano-2025-08-07", 12.5, 300,
+                1000, 2000, "low", 3, ("public", "internal"),
+            ),
+        )
+
+    def test_invalid_generation_limits_and_visibility_are_rejected(self) -> None:
+        """Reject unsafe or contradictory environment configuration."""
+        invalid = (
+            {"OPENAI_MAX_OUTPUT_TOKENS": "15"},
+            {"RAG_MAX_CONTEXT_TOKENS": "2000", "RAG_MAX_GENERATION_INPUT_TOKENS": "2000"},
+            {"OPENAI_REASONING_EFFORT": "maximum"},
+            {"OPENAI_MAX_CONCURRENT_REQUESTS": "0"},
+            {"RAG_EXTERNAL_ALLOWED_VISIBILITIES": "public,secret"},
+        )
+        for overrides in invalid:
+            with self.subTest(overrides=overrides):
+                with patch.dict(
+                    os.environ,
+                    {"OPENAI_API_KEY": "test-key", **overrides},
+                    clear=True,
+                ):
+                    with self.assertRaises(ConfigurationError):
+                        load_rag_generation_settings()
 
 
 if __name__ == "__main__":
