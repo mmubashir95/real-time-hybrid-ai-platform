@@ -32,9 +32,16 @@ class ResponsesClient(Protocol):
     responses: object
 
 
-def estimate_cost(usage: TokenUsage | None) -> CostEstimate | None:
-    """Calculate GPT-5 Nano text cost using separately priced cached input."""
-    if usage is None:
+PRICED_MODEL_PREFIX = "gpt-5-nano"
+
+
+def estimate_cost(usage: TokenUsage | None, model: str) -> CostEstimate | None:
+    """Calculate GPT-5 Nano text cost using separately priced cached input.
+
+    Returns None for any other model because only GPT-5 Nano rates are recorded;
+    applying them to another model would report a wrong estimate as valid.
+    """
+    if usage is None or not model.startswith(PRICED_MODEL_PREFIX):
         return None
     uncached_input = usage.input_tokens - usage.cached_input_tokens
     if uncached_input < 0:
@@ -155,7 +162,7 @@ class OpenAIResponsesClient:
                 model=response.model,
                 provider_response_id=getattr(response, "id", None),
                 usage=usage,
-                cost=estimate_cost(usage),
+                cost=estimate_cost(usage, response.model),
                 latency_ms=latency_ms,
             )
         except asyncio.CancelledError:

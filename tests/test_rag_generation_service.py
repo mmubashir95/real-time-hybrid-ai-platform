@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 import unittest
 
 from app.config import RagGenerationSettings
@@ -203,11 +204,54 @@ class RagGenerationServiceTests(unittest.IsolatedAsyncioTestCase):
             )
             self.assertEqual(generator.calls, [])
 
+    async def test_retrieval_scope_is_narrowed_to_externally_allowed_visibilities(
+        self,
+    ) -> None:
+        """Retrieve only evidence that the egress policy allows to be sent."""
+        internal_caller = replace(
+            request(),
+            context=TrustedSearchContext(
+                "asterdesk", ("public", "internal"), SearchContextOrigin.INTERNAL
+            ),
+        )
+        pipeline = FakePipeline(pipeline_response((reranked(),)))
+        service = RagGenerationService(pipeline, FakeGenerator(), settings())
+
+        response = await service.answer_question(internal_caller)
+
+        self.assertEqual(response.status, GenerationStatus.GENERATED)
+        sent_request = pipeline.calls[0][0]
+        self.assertEqual(sent_request.context.permitted_visibilities, ("public",))
+        self.assertEqual(sent_request.context.tenant_id, "asterdesk")
+
+    async def test_no_sendable_visibility_fails_before_retrieval(self) -> None:
+        """Fail early when nothing the caller may read may leave the backend."""
+        internal_only = replace(
+            request(),
+            context=TrustedSearchContext(
+                "asterdesk", ("internal",), SearchContextOrigin.INTERNAL
+            ),
+        )
+        pipeline = FakePipeline(pipeline_response((reranked(),)))
+        service = RagGenerationService(pipeline, FakeGenerator(), settings())
+
+        with self.assertRaises(GenerationPipelineError) as caught:
+            await service.answer_question(internal_only)
+
+        self.assertEqual(
+            caught.exception.code, GenerationErrorCode.EXTERNAL_DATA_POLICY_ERROR
+        )
+        self.assertEqual(pipeline.calls, [])
+
     async def test_retrieval_and_reranking_failures_remain_distinct(self) -> None:
         """Do not convert infrastructure failures into valid no-evidence results."""
         failures = (
             (RetrievalError("db unavailable"), GenerationErrorCode.RETRIEVAL_ERROR),
             (RerankerInferenceError("model unavailable"), GenerationErrorCode.RERANKING_ERROR),
+            (
+                ValueError("Reranking candidates must belong to one authorized tenant"),
+                GenerationErrorCode.RERANKING_ERROR,
+            ),
         )
         for failure, expected_code in failures:
             with self.subTest(failure=failure):

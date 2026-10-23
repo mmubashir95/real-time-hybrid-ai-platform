@@ -7,7 +7,7 @@ Phase 9 adds a bounded answer-generation stage after the existing Phase 7 hybrid
 1. Phase 7 retrieves tenant- and visibility-authorized candidates.
 2. Phase 8 reranks those same candidates without changing their provenance.
 3. The context builder selects complete passages in rerank order within a token budget. It truncates only the lowest-priority tail of the highest-ranked passage when no complete passage fits.
-4. The external-data policy checks the tenant and configured visibility again before transmission.
+4. Before retrieval, the trusted visibility scope is narrowed to `RAG_EXTERNAL_ALLOWED_VISIBILITIES`, so only sendable evidence is retrieved. Before transmission, the external-data policy checks the tenant and visibility again as a safety net.
 5. One OpenAI Responses API request generates the answer. Empty evidence returns a deterministic no-evidence response and makes no paid request.
 
 Retrieved document text is explicitly delimited and treated as untrusted data. It cannot replace system instructions. This phase does not implement user-visible answer citations; citation rendering and verification remain Phase 10 work.
@@ -76,7 +76,7 @@ The CLI prints the answer, the exact supplied chunk/document/version/section/pag
 
 ## Model and pricing note
 
-The implementation keeps `gpt-5-nano` because it is the model selected for this phase. OpenAI currently marks `gpt-5-nano` and its `gpt-5-nano-2025-08-07` snapshot as deprecated, so a later phase should evaluate a supported replacement before production launch. The recorded price constants, effective 2026-10-23, are $0.05 per million uncached input tokens, $0.005 per million cached input tokens, and $0.40 per million output tokens. Cost is an estimate based on provider-reported usage and these versioned constants.
+The implementation keeps `gpt-5-nano` because it is the model selected for this phase. OpenAI currently marks `gpt-5-nano` and its `gpt-5-nano-2025-08-07` snapshot as deprecated, so a later phase should evaluate a supported replacement before production launch. The recorded price constants, effective 2026-10-23, are $0.05 per million uncached input tokens, $0.005 per million cached input tokens, and $0.40 per million output tokens. Cost is an estimate based on provider-reported usage and these versioned constants. Cost is reported only when the responding model is a `gpt-5-nano` snapshot; any other configured model reports no cost rather than a wrong one.
 
 Official references:
 

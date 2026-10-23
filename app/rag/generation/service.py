@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 import logging
 from time import perf_counter
 from typing import Protocol
@@ -76,6 +77,7 @@ class RagGenerationService:
         """Return a generated answer or deterministic no-evidence response."""
         started = perf_counter()
         try:
+            request = self._restrict_to_external_visibilities(request)
             try:
                 search_response, rerank_response = (
                     await self._retrieval_and_reranking.search(request, top_k=top_k)
@@ -89,6 +91,13 @@ class RagGenerationService:
                 raise GenerationPipelineError(
                     GenerationErrorCode.RERANKING_ERROR,
                     "Passage reranking failed.",
+                ) from error
+            except ValueError as error:
+                # Phase 7/8 validation rejects invalid requests and inconsistent
+                # candidates (such as mixed tenants) with ValueError.
+                raise GenerationPipelineError(
+                    GenerationErrorCode.RERANKING_ERROR,
+                    "Retrieval or reranking rejected the request or its candidates.",
                 ) from error
 
             retrieval_ms = search_response.diagnostics.total_seconds * 1000
@@ -202,6 +211,26 @@ class RagGenerationService:
                 request_id,
                 (perf_counter() - started) * 1000,
             )
+
+    def _restrict_to_external_visibilities(self, request: SearchRequest) -> SearchRequest:
+        """Narrow the trusted scope to visibilities approved for external generation.
+
+        Retrieving only sendable evidence keeps one highly ranked restricted
+        passage from failing the whole request after paid-for retrieval work.
+        """
+        allowed = set(self._settings.externally_allowed_visibilities)
+        permitted = request.context.permitted_visibilities
+        sendable = tuple(value for value in permitted if value in allowed)
+        if not sendable:
+            raise GenerationPipelineError(
+                GenerationErrorCode.EXTERNAL_DATA_POLICY_ERROR,
+                "No authorized visibility is approved for external generation.",
+            )
+        if sendable == permitted:
+            return request
+        return replace(
+            request, context=replace(request.context, permitted_visibilities=sendable)
+        )
 
     def _validate_external_data_policy(self, request: SearchRequest, passages) -> None:
         """Prevent unauthorized or deployment-disallowed evidence transmission."""

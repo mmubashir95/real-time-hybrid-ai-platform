@@ -151,7 +151,21 @@ class OpenAIResponsesClientTests(unittest.IsolatedAsyncioTestCase):
             total_tokens=3,
         )
         with self.assertRaises(GenerationPipelineError):
-            estimate_cost(invalid)
+            estimate_cost(invalid, "gpt-5-nano")
+
+    def test_cost_is_only_estimated_for_priced_model(self) -> None:
+        """Never apply GPT-5 Nano rates to a differently configured model."""
+        valid = TokenUsage(
+            input_tokens=2_000,
+            cached_input_tokens=0,
+            output_tokens=200,
+            reasoning_tokens=0,
+            total_tokens=2_200,
+        )
+        self.assertAlmostEqual(
+            estimate_cost(valid, "gpt-5-nano-2025-08-07").estimated_cost_usd, 0.00018
+        )
+        self.assertIsNone(estimate_cost(valid, "gpt-5-2025-08-07"))
 
 
 if __name__ == "__main__":
