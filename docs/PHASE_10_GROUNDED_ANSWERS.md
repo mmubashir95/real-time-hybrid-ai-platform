@@ -74,8 +74,13 @@ structurally valid claim index exactly once.
 - `CONTRADICTED`: evidence explicitly conflicts with it.
 - `INSUFFICIENT_EVIDENCE`: evidence is incomplete or ambiguous.
 
-Missing or malformed verification coverage yields `grounding_failed`; it never
-becomes a grounded answer. There is no correction or regeneration loop.
+Missing or malformed verification coverage, provider failure, and truncated or
+schema-invalid verifier output yield `grounding_failed`; none becomes a grounded
+answer. Invalid or truncated draft output raises a controlled `generation_error`.
+
+Claim text must not carry its own citations. A claim containing a numbered
+marker such as `[2]`, an `E` identifier, or a `Source:` label is rejected like a
+forged citation, because only the server renders citation markers. There is no correction or regeneration loop.
 
 ## Authorization and prompt-injection boundary
 
@@ -94,8 +99,9 @@ or end-user answer.
 Grounded mode uses at most two paid requests: one structured draft and one
 batched verification. Empty evidence, explicit draft insufficiency, and drafts
 whose citations are all invalid skip verification. Generation and verification
-usage, costs, and latency are reported separately. Verification output is capped
-at the lower of 384 tokens and the configured output limit.
+usage, costs, and latency are reported separately. The verification output
+allowance is the larger of the configured output limit and 96 tokens per
+verified claim, so a full batch is not truncated mid-response.
 
 ## Developer CLI
 

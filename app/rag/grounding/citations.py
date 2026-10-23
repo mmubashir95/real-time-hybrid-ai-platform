@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
 from types import MappingProxyType
 from typing import Mapping
 
 from app.rag.grounding.models import EvidenceRecord, GeneratedClaim
 from app.rag.reranking.models import RerankedPassage
+
+
+# Citations are rendered only by the server; numbered markers, E IDs, or source
+# labels inside model text would display provenance the registry never issued.
+EMBEDDED_CITATION_PATTERN = re.compile(r"\[\s*\d+\s*\]|\bE\d+\b|\bsources?\s*:", re.IGNORECASE)
 
 
 class EvidenceRegistry:
@@ -49,7 +55,12 @@ class EvidenceRegistry:
         return tuple(self._records.values())
 
     def validate_claim(self, claim: GeneratedClaim) -> tuple[EvidenceRecord, ...]:
-        """Resolve only IDs present in this request-specific registry."""
+        """Resolve only IDs present in this request-specific registry.
+
+        Raises ValueError for unknown IDs or claim text carrying its own citations.
+        """
+        if EMBEDDED_CITATION_PATTERN.search(claim.text):
+            raise ValueError("Claim text must not contain citation markers or source labels")
         unknown = [item for item in claim.evidence_ids if item not in self._records]
         if unknown:
             raise ValueError(f"Unknown evidence IDs: {', '.join(unknown)}")

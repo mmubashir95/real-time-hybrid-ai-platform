@@ -50,6 +50,7 @@ VERIFICATION_LIMITATION = (
     "Semantic support is judged by an automated model and is not a guarantee of factual correctness."
 )
 PROMPT_TOKEN_OVERHEAD = 32
+VERIFICATION_TOKENS_PER_CLAIM = 96
 
 
 class RetrievalAndReranking(Protocol):
@@ -187,9 +188,12 @@ class GroundedRagService:
                 verification_message,
                 VerificationBatch,
                 request_id=request_id,
-                # Verification labels and short reasons do not need the full
-                # answer-generation output allowance.
-                max_output_tokens=min(self._settings.max_output_tokens, 384),
+                # Each decision carries a label and a short reason; scale the
+                # allowance so a full batch is not truncated mid-JSON.
+                max_output_tokens=max(
+                    self._settings.max_output_tokens,
+                    VERIFICATION_TOKENS_PER_CLAIM * len(valid_claims),
+                ),
             )
         except GenerationPipelineError:
             return self._verification_failed_response(

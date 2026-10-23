@@ -67,7 +67,7 @@ class ClaimVerification(BaseModel):
 
     claim_index: int = Field(ge=0)
     outcome: ClaimSupport
-    reason: str = Field(min_length=1, max_length=500)
+    reason: str = Field(min_length=1, max_length=200)
 
 
 class VerificationBatch(BaseModel):

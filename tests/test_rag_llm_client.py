@@ -7,6 +7,7 @@ import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
 import openai
+from pydantic import ValidationError
 
 from app.config import RagGenerationSettings
 from app.rag.generation.models import GenerationErrorCode, GenerationPipelineError, TokenUsage
@@ -121,6 +122,17 @@ class OpenAIResponsesClientTests(unittest.IsolatedAsyncioTestCase):
             text_format=GroundedDraft, max_output_tokens=128,
             reasoning={"effort": "minimal"}, store=False,
         )
+
+    async def test_invalid_or_truncated_structured_output_is_controlled(self) -> None:
+        """Map SDK-side Pydantic validation failures to the safe error contract."""
+        try:
+            GroundedDraft.model_validate_json('{"status":"grounded","claims":[]}')
+        except ValidationError as error:
+            validation_error = error
+        self.sdk.responses.parse = AsyncMock(side_effect=validation_error)
+        with self.assertRaises(GenerationPipelineError) as caught:
+            await self.client.generate_structured("system", "user", GroundedDraft)
+        self.assertEqual(caught.exception.code, GenerationErrorCode.GENERATION_ERROR)
 
     async def test_incomplete_empty_and_malformed_usage_are_rejected(self) -> None:
         """Never report incomplete or malformed provider output as generated."""

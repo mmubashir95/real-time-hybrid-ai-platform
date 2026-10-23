@@ -9,7 +9,7 @@ from typing import Protocol, TypeVar
 
 import openai
 from openai import AsyncOpenAI
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from app.config import RagGenerationSettings
 from app.rag.generation.models import (
@@ -263,6 +263,13 @@ class OpenAIResponsesClient:
             raise
         except GenerationPipelineError:
             raise
+        except ValidationError as error:
+            # The SDK validates JSON inside parse(), before status is visible, so
+            # truncated or locally invalid output surfaces here, not as APIError.
+            raise GenerationPipelineError(
+                GenerationErrorCode.GENERATION_ERROR,
+                "OpenAI returned invalid or incomplete structured output.",
+            ) from error
         except openai.APITimeoutError as error:
             raise GenerationPipelineError(
                 GenerationErrorCode.LLM_PROVIDER_ERROR,
