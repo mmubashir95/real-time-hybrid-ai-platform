@@ -21,6 +21,10 @@ tiktoken==0.12.0
 
 # Local Phase 5 embedding inference and compact numerical artifacts
 sentence-transformers==5.1.1
+# Phase 8 uses Qwen's documented causal-LM scoring path directly. Pinning the
+# transitive libraries makes the pretrained baseline reproducible.
+transformers==4.57.6
+huggingface-hub==0.36.2
 # Pinned explicitly because it is the largest transitive inference dependency.
 torch==2.14.1
 numpy==2.3.4

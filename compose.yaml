@@ -39,6 +39,10 @@ services:
     # pgvector 0.8.7, built on the same PostgreSQL 17 Bookworm base image.
     # The digest pins the multi-platform image rather than a host architecture.
     image: pgvector/pgvector:0.8.7-pg17-bookworm@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
+    # Host-side development tools need PostgreSQL while retaining MPS access.
+    # Bind only to loopback so the development database is not network-exposed.
+    ports:
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_DB: realtime_ai
       POSTGRES_USER: realtime_ai
