@@ -6,7 +6,7 @@ import unittest
 
 from app.rag.persistence.lifecycle import EmbeddingProfile
 from app.rag.reranking import PairScore, RerankerConfig, RerankingService, RetrievalRerankingService
-from app.rag.reranking.qwen3 import Qwen3Reranker
+from app.rag.reranking.qwen3 import ASSISTANT_SUFFIX, SYSTEM_PREFIX, Qwen3Reranker
 from app.rag.retrieval import (
     SearchContextOrigin,
     SearchFilters,
@@ -143,6 +143,50 @@ class QwenInputPreparationTests(unittest.TestCase):
         # Both inputs begin with exactly the same system, instruction, and query.
         shared_prefix = next(index for index, (left, right) in enumerate(zip(short_tokens, long_tokens)) if left != right)
         self.assertGreater(shared_prefix, len("refund?"))
+
+    def test_input_ids_match_official_qwen_recipe(self) -> None:
+        """Match Qwen's reference tokenization, including the passage boundary merge."""
+        try:
+            from transformers import AutoTokenizer
+
+            config = RerankerConfig(max_length=120, local_files_only=True)
+            tokenizer = AutoTokenizer.from_pretrained(
+                config.model_id, revision=config.tokenizer_revision, local_files_only=True
+            )
+        except (ImportError, OSError) as error:
+            self.skipTest(f"Cached Qwen3 tokenizer unavailable: {error}")
+        scorer = Qwen3Reranker(config)
+        scorer._tokenizer = tokenizer
+        prefix = tokenizer.encode(SYSTEM_PREFIX, add_special_tokens=False)
+        suffix = tokenizer.encode(ASSISTANT_SUFFIX, add_special_tokens=False)
+        query = "Can I get a refund after being charged twice?"
+        for document in ("Verified duplicate charges may qualify.", "  spaced", "\nnewline", "word " * 200):
+            # Reference: one pair string, tail-truncated to the remaining budget.
+            reference = tokenizer(
+                [f"<Instruct>: {config.instruction}\n<Query>: {query}\n<Document>: {document}"],
+                truncation="longest_first",
+                max_length=config.max_length - len(prefix) - len(suffix),
+            )["input_ids"][0]
+            token_ids, truncated = scorer._prepare_input(query, document)
+            self.assertEqual(token_ids, prefix + reference + suffix)
+            self.assertLessEqual(len(token_ids), config.max_length)
+            self.assertEqual(truncated, document.startswith("word"))
+
+
+class PrecisionResolutionTests(unittest.TestCase):
+    """Keep CPU defaults on fast float32 kernels."""
+
+    def test_auto_precision_uses_float32_on_cpu_only(self) -> None:
+        """Avoid slow CPU bfloat16 while leaving accelerator dtype to the checkpoint."""
+        import torch
+
+        def resolve(device: str, precision: str):
+            return Qwen3Reranker(RerankerConfig(device=device, precision=precision))._resolve_dtype(torch)
+
+        self.assertIs(resolve("cpu", "auto"), torch.float32)
+        self.assertEqual(resolve("mps", "auto"), "auto")
+        self.assertIs(resolve("cpu", "bfloat16"), torch.bfloat16)
+        self.assertIs(resolve("mps", "float16"), torch.float16)
 
 
 class FakeRetrieval:

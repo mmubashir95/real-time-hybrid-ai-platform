@@ -37,7 +37,7 @@ Each final result retains the exact original passage object and adds:
 | Model-supported context | 32k tokens (the application deliberately uses a smaller bound) |
 | Default batch size | 4 |
 | Default device | CPU; MPS is an explicit alternative |
-| Default precision | `auto` |
+| Default precision | `auto` (float32 on CPU; checkpoint dtype on accelerators) |
 | Transformers | `4.57.6` |
 | Sentence Transformers | `5.1.1` (used by Phase 5 embeddings, not Qwen scoring) |
 | PyTorch | `2.14.1` |
@@ -51,9 +51,15 @@ incorrect classification-head assumption.
 ## Input and truncation policy
 
 The adapter builds Qwen's documented system prompt, instruction, query,
-document, and assistant suffix. It tokenizes the fixed instruction/query first
-and gives the remaining bounded budget to the passage. Only passage tokens may
-be truncated. If the fixed task and query exceed the entire budget, inference
+document, and assistant suffix. Like Qwen's reference code, it tokenizes the
+instruction, query, and passage as one string so the passage's first word keeps
+its leading-space token merge; tokenizing the passage separately changes the
+token sequence and shifts scores. Over-budget inputs are cut from the tail, and
+because the passage comes last, only passage tokens may be truncated.
+
+`auto` precision loads the checkpoint's bfloat16 weights on accelerators but
+resolves to float32 on CPU: bfloat16 lacks fast kernels on most CPUs and was
+measured at about 8x slower (35.3s vs 4.5s for 20 candidates). If the fixed task and query exceed the entire budget, inference
 fails explicitly. Every truncated pair is counted in diagnostics and evaluation.
 
 Phase 4 currently targets 400-token chunks and limits chunks to 500

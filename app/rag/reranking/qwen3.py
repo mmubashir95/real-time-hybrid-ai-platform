@@ -69,12 +69,7 @@ class Qwen3Reranker:
             import torch
             from transformers import AutoModelForCausalLM, AutoTokenizer
 
-            dtype = {
-                "auto": "auto",
-                "float32": torch.float32,
-                "float16": torch.float16,
-                "bfloat16": torch.bfloat16,
-            }[self.config.precision]
+            dtype = self._resolve_dtype(torch)
             tokenizer = AutoTokenizer.from_pretrained(
                 self.config.model_id,
                 revision=self.config.tokenizer_revision,
@@ -98,26 +93,46 @@ class Qwen3Reranker:
             self.config.device, self._model_load_seconds,
         )
 
+    def _resolve_dtype(self, torch_module):
+        """Map configured precision to the dtype passed to Transformers.
+
+        "auto" would load the checkpoint's stored bfloat16 weights. CPUs without
+        native bfloat16 kernels run that about 8x slower than float32 (measured:
+        35.3s vs 4.5s for 20 candidates), so CPU "auto" resolves to float32.
+        Accelerators keep the checkpoint dtype.
+        """
+        if self.config.precision == "auto":
+            return torch_module.float32 if self.config.device == "cpu" else "auto"
+        return {
+            "float32": torch_module.float32,
+            "float16": torch_module.float16,
+            "bfloat16": torch_module.bfloat16,
+        }[self.config.precision]
+
     def _prepare_input(self, query: str, passage: str) -> tuple[list[int], bool]:
-        """Preserve instruction/query tokens and truncate only passage content."""
+        """Build Qwen's exact input IDs, truncating only the passage tail.
+
+        Returns the token IDs and whether the passage was truncated. Raises
+        ValueError when the instruction and query alone exhaust the budget.
+        """
         assert self._tokenizer is not None
         user_prefix = (
             f"<Instruct>: {self.config.instruction}\n<Query>: {query}\n<Document>: "
         )
-        fixed_tokens = self._tokenizer.encode(
-            SYSTEM_PREFIX + user_prefix, add_special_tokens=False
-        )
+        system_tokens = self._tokenizer.encode(SYSTEM_PREFIX, add_special_tokens=False)
         suffix_tokens = self._tokenizer.encode(ASSISTANT_SUFFIX, add_special_tokens=False)
-        available_passage_tokens = self.config.max_length - len(fixed_tokens) - len(suffix_tokens)
-        if available_passage_tokens <= 0:
+        user_budget = self.config.max_length - len(system_tokens) - len(suffix_tokens)
+        if len(self._tokenizer.encode(user_prefix, add_special_tokens=False)) >= user_budget:
             raise ValueError("Query and reranking instruction exceed the input token budget")
-        passage_tokens = self._tokenizer.encode(passage, add_special_tokens=False)
-        truncated = len(passage_tokens) > available_passage_tokens
-        # Passage-only truncation prevents a long chunk from removing the task or question.
-        return (
-            fixed_tokens + passage_tokens[:available_passage_tokens] + suffix_tokens,
-            truncated,
-        )
+        # Tokenize the prefix and passage as one string, as Qwen's reference does.
+        # Encoding them separately splits the "<Document>: " space from the
+        # passage's first word (e.g. "Ġ","Verified" instead of "ĠVerified"),
+        # which shifts scores by up to ~0.9 logits.
+        user_tokens = self._tokenizer.encode(user_prefix + passage, add_special_tokens=False)
+        truncated = len(user_tokens) > user_budget
+        # The passage is last, so cutting the tail never removes the task or
+        # question (the check above guarantees room for at least one passage token).
+        return system_tokens + user_tokens[:user_budget] + suffix_tokens, truncated
 
     def _score_batch(self, query: str, passages: Sequence[str]) -> list[PairScore]:
         """Return Qwen's raw yes/no logit differences for one bounded batch."""
