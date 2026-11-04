@@ -19,7 +19,10 @@ so correlated errors remain possible and require Phase 11 evaluation.
 3. The existing Phase 9 context builder selects passages under a token budget
    and assigns `E1`, `E2`, and so on in supplied order.
 4. `EvidenceRegistry` independently creates the same request-local mapping from
-   the actual included passage objects. The model cannot supply provenance.
+   the exact passage text included in the rendered context. If the first
+   passage is tail-truncated to fit, the registry and verifier receive only
+   that supplied prefix, never the omitted original tail. The model cannot
+   supply provenance.
 5. GPT-5 Nano returns a provider-native `GroundedDraft`: either explicit
    insufficiency or ordered claims containing evidence IDs.
 6. Unknown IDs are rejected before verification. One bounded verification call
@@ -134,6 +137,29 @@ For a live smoke test, configure the existing database, model artifacts, and
 OpenAI credentials, then run the known duplicate-charge CLI query in grounded
 mode. Inspect every rendered claim against its cited chunk. Live execution is
 intentional and must not be folded into deterministic automated tests.
+
+## Latest validation status
+
+The November 4, 2026 code review confirmed the request-local citation mapping,
+fail-closed verifier coverage checks, deterministic final rendering, and
+authorization-first SQL filters. It also found and fixed one evidence-consistency
+defect: a token-truncated generation context previously retained the full
+original passage object for registry construction and verification. Regression
+coverage now asserts that omitted tail text reaches neither the registry nor
+the verifier.
+
+The same review added separate `context_building_ms` and `final_rendering_ms`
+measurements to the grounded response and CLI output. A lightweight syntax
+compilation passed. The focused deterministic tests could not start in the
+restricted review environment because `tiktoken` attempted to fetch the
+uncached `o200k_base` encoding and DNS/network access was unavailable. This is
+an environment limitation, not a passing or failing test result.
+
+Full regression, database-backed integration, and live OpenAI execution were
+intentionally left for the operator. Phase 10 remains **complete with
+limitations** until those commands pass and the live claims are manually
+checked against their cited passage text. Do not record latency, tokens, cost,
+or citation-quality results until that run has occurred.
 
 ## Known limitations and Phase 11 prerequisites
 

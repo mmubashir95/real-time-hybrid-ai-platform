@@ -130,14 +130,16 @@ class GroundingDiagnostics(BaseModel):
 
 
 class GroundingLatency(BaseModel):
-    """Separate measured retrieval, reranking, generation, and verification time."""
+    """Separate measured pipeline-stage and total latency."""
 
     model_config = ConfigDict(frozen=True)
 
     retrieval_ms: float = Field(ge=0)
     reranking_ms: float = Field(ge=0)
+    context_building_ms: float = Field(default=0, ge=0)
     generation_ms: float = Field(ge=0)
     verification_ms: float | None = Field(default=None, ge=0)
+    final_rendering_ms: float = Field(default=0, ge=0)
     total_ms: float = Field(ge=0)
 
 

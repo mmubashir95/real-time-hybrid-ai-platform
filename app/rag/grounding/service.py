@@ -123,6 +123,7 @@ class GroundedRagService:
         if not rerank_response.results:
             return self._empty_response(started, retrieval_ms, reranking_ms)
 
+        context_started = perf_counter()
         # Reuse the Phase 9 context builder so E-number order and truncation
         # behavior remain identical between comparison modes.
         empty_message = compose_user_message(request.query, "")
@@ -157,6 +158,7 @@ class GroundedRagService:
                 GenerationErrorCode.EXTERNAL_DATA_POLICY_ERROR,
                 "Evidence failed grounding provenance or authorization validation.",
             ) from error
+        context_building_ms = (perf_counter() - context_started) * 1_000
         draft_result = await self._generator.generate_structured(
             GROUNDED_GENERATION_INSTRUCTION,
             compose_user_message(request.query, context.text),
@@ -166,7 +168,8 @@ class GroundedRagService:
         draft = draft_result.output
         if draft.status != GroundingStatus.GROUNDED:
             return self._insufficient_draft_response(
-                started, retrieval_ms, reranking_ms, registry, draft_result
+                started, retrieval_ms, reranking_ms, context_building_ms,
+                registry, draft_result
             )
 
         valid_claims, invalid_count = self._resolve_claims(draft.claims, registry)
@@ -175,6 +178,7 @@ class GroundedRagService:
                 started,
                 retrieval_ms,
                 reranking_ms,
+                context_building_ms,
                 registry,
                 draft_result,
                 len(draft.claims),
@@ -200,6 +204,7 @@ class GroundedRagService:
                 started,
                 retrieval_ms,
                 reranking_ms,
+                context_building_ms,
                 registry,
                 draft_result,
                 len(draft.claims),
@@ -215,6 +220,7 @@ class GroundedRagService:
                 started,
                 retrieval_ms,
                 reranking_ms,
+                context_building_ms,
                 registry,
                 draft_result,
                 len(draft.claims),
@@ -227,10 +233,12 @@ class GroundedRagService:
             if decisions[item[0]].outcome == ClaimSupport.SUPPORTED
         ]
         counts = self._outcome_counts(decisions.values())
+        rendering_started = perf_counter()
         answer, citations = self._render_supported(supported)
         status = GroundingStatus.GROUNDED if supported else GroundingStatus.INSUFFICIENT_EVIDENCE
         if not supported:
             answer = INSUFFICIENT_ANSWER
+        final_rendering_ms = (perf_counter() - rendering_started) * 1_000
         return GroundedAnswerResponse(
             status=status,
             answer=answer,
@@ -257,8 +265,10 @@ class GroundedRagService:
             latency=GroundingLatency(
                 retrieval_ms=retrieval_ms,
                 reranking_ms=reranking_ms,
+                context_building_ms=context_building_ms,
                 generation_ms=draft_result.latency_ms,
                 verification_ms=verification_result.latency_ms,
+                final_rendering_ms=final_rendering_ms,
                 total_ms=(perf_counter() - started) * 1_000,
             ),
         )
@@ -289,10 +299,11 @@ class GroundedRagService:
             if historical is None and passage.status != "active":
                 raise ValueError("Archived evidence requires exact historical authorization")
             if historical is not None and (
-                passage.document_id != historical.document_id
+                passage.status != "archived"
+                or passage.document_id != historical.document_id
                 or passage.document_version != historical.version
             ):
-                raise ValueError("Evidence does not match exact historical authorization")
+                raise ValueError("Evidence does not match exact archived-version authorization")
 
     @staticmethod
     def _resolve_claims(claims, registry):
@@ -347,26 +358,33 @@ class GroundedRagService:
     def _empty_response(self, started, retrieval_ms, reranking_ms):
         """Return explicit no-evidence without making a paid provider call."""
         return self._base_insufficient(
-            started, retrieval_ms, reranking_ms, (), 0, 0, 0, None, None, 0
+            started, retrieval_ms, reranking_ms, 0, (), 0, 0, 0, None, None, 0
         )
 
-    def _insufficient_draft_response(self, started, retrieval_ms, reranking_ms, registry, draft):
+    def _insufficient_draft_response(
+        self, started, retrieval_ms, reranking_ms, context_building_ms,
+        registry, draft,
+    ):
         """Return the model's structured insufficiency without verification."""
         return self._base_insufficient(
-            started, retrieval_ms, reranking_ms, registry.records, 0, 0, 0,
-            draft, None, 1
+            started, retrieval_ms, reranking_ms, context_building_ms,
+            registry.records, 0, 0, 0, draft, None, 1
         )
 
-    def _all_rejected_response(self, started, retrieval_ms, reranking_ms, registry, draft, count, invalid):
+    def _all_rejected_response(
+        self, started, retrieval_ms, reranking_ms, context_building_ms,
+        registry, draft, count, invalid,
+    ):
         """Return insufficiency when every generated claim has forged citations."""
         return self._base_insufficient(
-            started, retrieval_ms, reranking_ms, registry.records, count, invalid, 0,
-            draft, None, 1
+            started, retrieval_ms, reranking_ms, context_building_ms,
+            registry.records, count, invalid, 0, draft, None, 1
         )
 
     def _base_insufficient(
-        self, started, retrieval_ms, reranking_ms, evidence, claim_count,
-        invalid_count, verified_count, draft, verification, request_count,
+        self, started, retrieval_ms, reranking_ms, context_building_ms,
+        evidence, claim_count, invalid_count, verified_count, draft,
+        verification, request_count,
     ):
         """Assemble deterministic insufficient-evidence variants."""
         return GroundedAnswerResponse(
@@ -391,20 +409,22 @@ class GroundedRagService:
             request_count=request_count,
             latency=GroundingLatency(
                 retrieval_ms=retrieval_ms, reranking_ms=reranking_ms,
+                context_building_ms=context_building_ms,
                 generation_ms=draft.latency_ms if draft else 0,
                 verification_ms=verification.latency_ms if verification else None,
+                final_rendering_ms=0,
                 total_ms=(perf_counter() - started) * 1_000,
             ),
         )
 
     def _verification_failed_response(
-        self, started, retrieval_ms, reranking_ms, registry, draft, claim_count,
-        invalid_count, *, verification_result=None,
+        self, started, retrieval_ms, reranking_ms, context_building_ms,
+        registry, draft, claim_count, invalid_count, *, verification_result=None,
     ):
         """Fail closed when the semantic verifier fails or returns malformed coverage."""
         base = self._base_insufficient(
-            started, retrieval_ms, reranking_ms, registry.records, claim_count,
-            invalid_count, 0, draft, verification_result,
+            started, retrieval_ms, reranking_ms, context_building_ms,
+            registry.records, claim_count, invalid_count, 0, draft, verification_result,
             2,
         )
         return base.model_copy(update={"status": GroundingStatus.GROUNDING_FAILED})

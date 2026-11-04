@@ -221,8 +221,10 @@ def _print_grounded_response(response, output: TextIO) -> None:
     print(
         f"  Latency ms: retrieval={response.latency.retrieval_ms:.3f} "
         f"reranking={response.latency.reranking_ms:.3f} "
+        f"context={response.latency.context_building_ms:.3f} "
         f"generation={response.latency.generation_ms:.3f} "
         f"verification={response.latency.verification_ms if response.latency.verification_ms is not None else 'not measured'} "
+        f"rendering={response.latency.final_rendering_ms:.3f} "
         f"total={response.latency.total_ms:.3f}",
         file=output,
     )

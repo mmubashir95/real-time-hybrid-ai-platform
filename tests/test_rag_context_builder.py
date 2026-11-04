@@ -83,7 +83,9 @@ class ContextBuilderTests(unittest.TestCase):
         first = reranked("a", 1, "policy condition " * 200)
         result = build_context((first,), 90)
 
-        self.assertEqual(result.included, (first,))
+        self.assertEqual(result.included[0].passage.chunk_id, first.passage.chunk_id)
+        self.assertNotEqual(result.included[0].passage.text, first.passage.text)
+        self.assertIn(result.included[0].passage.text, result.text)
         self.assertEqual(result.truncated_chunk_ids, (first.passage.chunk_id,))
         self.assertLessEqual(result.estimated_tokens, 90)
         self.assertIn(first.passage.chunk_id, result.text)

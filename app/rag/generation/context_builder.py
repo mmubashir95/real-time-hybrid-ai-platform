@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import replace
 
 import tiktoken
 
@@ -63,8 +64,8 @@ def _render_complete_block(passage: RerankedPassage, evidence_number: int) -> st
 def _truncate_first_passage(
     passage: RerankedPassage,
     token_budget: int,
-) -> str | None:
-    """Fit the highest-ranked passage tail-first when no complete block fits."""
+) -> tuple[str, str] | None:
+    """Fit the highest-ranked passage tail-first and return its supplied text."""
     header = _evidence_header(passage, 1)
     footer = "\n[/E1]"
     fixed_tokens = count_generation_tokens(header + footer)
@@ -78,7 +79,7 @@ def _truncate_first_passage(
         truncated_text = ENCODING.decode(passage_tokens[:available_text_tokens])
         rendered = header + truncated_text + footer
         if count_generation_tokens(rendered) <= token_budget:
-            return rendered
+            return rendered, truncated_text
         available_text_tokens -= 1
     return None
 
@@ -125,11 +126,18 @@ def build_context(
 
     truncated: tuple[str, ...] = ()
     if not included:
-        truncated_block = _truncate_first_passage(passages[0], token_budget)
-        if truncated_block is None:
+        truncated_result = _truncate_first_passage(passages[0], token_budget)
+        if truncated_result is None:
             raise ContextBuildError("Context budget cannot fit evidence metadata")
+        truncated_block, supplied_text = truncated_result
+        # Downstream citation and verification code must receive the exact text
+        # supplied to generation, never the broader original chunk tail.
+        supplied_passage = replace(
+            passages[0],
+            passage=replace(passages[0].passage, text=supplied_text),
+        )
         blocks = [truncated_block]
-        included = [passages[0]]
+        included = [supplied_passage]
         used_tokens = count_generation_tokens(truncated_block)
         truncated = (passages[0].passage.chunk_id,)
         excluded = [
