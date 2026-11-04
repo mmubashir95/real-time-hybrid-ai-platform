@@ -126,6 +126,7 @@ class GroundingDiagnostics(BaseModel):
     insufficient_evidence_count: int = Field(ge=0)
     invalid_citation_count: int = Field(ge=0)
     included_evidence_count: int = Field(ge=0)
+    truncated_chunk_ids: tuple[str, ...] = ()
     verification_limitation: str
 
 

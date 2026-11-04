@@ -420,6 +420,10 @@ class GroundedRagServiceTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn(omitted_tail, generator.calls[0][1])
         self.assertNotIn(omitted_tail, generator.calls[1][1])
         self.assertNotIn(omitted_tail, response.evidence[0].passage_text)
+        self.assertEqual(
+            response.grounding.truncated_chunk_ids, (response.evidence[0].chunk_id,)
+        )
+        self.assertIn("Passage truncated", generator.calls[1][1])
         self.assertGreaterEqual(response.latency.context_building_ms, 0)
         self.assertGreaterEqual(response.latency.final_rendering_ms, 0)
 

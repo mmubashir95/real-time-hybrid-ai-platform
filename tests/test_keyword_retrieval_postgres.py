@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 import os
 from pathlib import Path
 import unittest
@@ -97,7 +98,8 @@ class KeywordSearchPostgresTests(unittest.IsolatedAsyncioTestCase):
             document_pk,
             version,
             f"Title {document}",
-            effective_date,
+            # asyncpg encodes $4::date from datetime.date, not ISO strings.
+            date.fromisoformat(effective_date),
             status,
             visibility,
             suffix * 64,

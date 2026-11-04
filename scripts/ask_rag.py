@@ -216,6 +216,7 @@ def _print_grounded_response(response, output: TextIO) -> None:
     print(f"  Claims unsupported: {diagnostics.unsupported_claim_count}", file=output)
     print(f"  Claims contradicted: {diagnostics.contradicted_claim_count}", file=output)
     print(f"  Invalid citations: {diagnostics.invalid_citation_count}", file=output)
+    print(f"  Truncated chunks: {len(diagnostics.truncated_chunk_ids)}", file=output)
     print(f"  Limitation: {diagnostics.verification_limitation}", file=output)
     print("\nPERFORMANCE", file=output)
     print(

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import replace
 from time import perf_counter
 from typing import Protocol
@@ -24,7 +23,6 @@ from app.rag.generation.prompts import compose_user_message
 from app.rag.grounding.citations import EvidenceRegistry
 from app.rag.grounding.models import (
     ClaimSupport,
-    GeneratedClaim,
     GroundedAnswerResponse,
     GroundedDraft,
     GroundingDiagnostics,
@@ -169,7 +167,8 @@ class GroundedRagService:
         if draft.status != GroundingStatus.GROUNDED:
             return self._insufficient_draft_response(
                 started, retrieval_ms, reranking_ms, context_building_ms,
-                registry, draft_result
+                registry, draft_result,
+                truncated_chunk_ids=context.truncated_chunk_ids,
             )
 
         valid_claims, invalid_count = self._resolve_claims(draft.claims, registry)
@@ -183,6 +182,7 @@ class GroundedRagService:
                 draft_result,
                 len(draft.claims),
                 invalid_count,
+                truncated_chunk_ids=context.truncated_chunk_ids,
             )
 
         verification_message = compose_verification_message(valid_claims)
@@ -209,6 +209,7 @@ class GroundedRagService:
                 draft_result,
                 len(draft.claims),
                 invalid_count,
+                truncated_chunk_ids=context.truncated_chunk_ids,
             )
 
         decisions = {item.claim_index: item for item in verification_result.output.decisions}
@@ -226,6 +227,7 @@ class GroundedRagService:
                 len(draft.claims),
                 invalid_count,
                 verification_result=verification_result,
+                truncated_chunk_ids=context.truncated_chunk_ids,
             )
 
         supported = [
@@ -253,6 +255,7 @@ class GroundedRagService:
                 insufficient_evidence_count=counts[ClaimSupport.INSUFFICIENT_EVIDENCE],
                 invalid_citation_count=invalid_count,
                 included_evidence_count=len(registry.records),
+                truncated_chunk_ids=context.truncated_chunk_ids,
                 verification_limitation=VERIFICATION_LIMITATION,
             ),
             generation_model=draft_result.model,
@@ -363,28 +366,30 @@ class GroundedRagService:
 
     def _insufficient_draft_response(
         self, started, retrieval_ms, reranking_ms, context_building_ms,
-        registry, draft,
+        registry, draft, *, truncated_chunk_ids,
     ):
         """Return the model's structured insufficiency without verification."""
         return self._base_insufficient(
             started, retrieval_ms, reranking_ms, context_building_ms,
-            registry.records, 0, 0, 0, draft, None, 1
+            registry.records, 0, 0, 0, draft, None, 1,
+            truncated_chunk_ids=truncated_chunk_ids,
         )
 
     def _all_rejected_response(
         self, started, retrieval_ms, reranking_ms, context_building_ms,
-        registry, draft, count, invalid,
+        registry, draft, count, invalid, *, truncated_chunk_ids,
     ):
         """Return insufficiency when every generated claim has forged citations."""
         return self._base_insufficient(
             started, retrieval_ms, reranking_ms, context_building_ms,
-            registry.records, count, invalid, 0, draft, None, 1
+            registry.records, count, invalid, 0, draft, None, 1,
+            truncated_chunk_ids=truncated_chunk_ids,
         )
 
     def _base_insufficient(
         self, started, retrieval_ms, reranking_ms, context_building_ms,
         evidence, claim_count, invalid_count, verified_count, draft,
-        verification, request_count,
+        verification, request_count, *, truncated_chunk_ids=(),
     ):
         """Assemble deterministic insufficient-evidence variants."""
         return GroundedAnswerResponse(
@@ -398,6 +403,7 @@ class GroundedRagService:
                 contradicted_claim_count=0, insufficient_evidence_count=0,
                 invalid_citation_count=invalid_count,
                 included_evidence_count=len(evidence),
+                truncated_chunk_ids=truncated_chunk_ids,
                 verification_limitation=VERIFICATION_LIMITATION,
             ),
             generation_model=draft.model if draft else self._settings.openai_model,
@@ -420,11 +426,12 @@ class GroundedRagService:
     def _verification_failed_response(
         self, started, retrieval_ms, reranking_ms, context_building_ms,
         registry, draft, claim_count, invalid_count, *, verification_result=None,
+        truncated_chunk_ids,
     ):
         """Fail closed when the semantic verifier fails or returns malformed coverage."""
         base = self._base_insufficient(
             started, retrieval_ms, reranking_ms, context_building_ms,
             registry.records, claim_count, invalid_count, 0, draft, verification_result,
-            2,
+            2, truncated_chunk_ids=truncated_chunk_ids,
         )
         return base.model_copy(update={"status": GroundingStatus.GROUNDING_FAILED})

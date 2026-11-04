@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from dataclasses import replace
 
@@ -13,6 +14,10 @@ from app.rag.reranking.models import RerankedPassage
 
 TOKENIZER_NAME = "o200k_base"
 ENCODING = tiktoken.get_encoding(TOKENIZER_NAME)
+# Untrusted passage text must not open or close evidence blocks; bracketed E
+# markers are rewritten so a document cannot forge a block boundary.
+EVIDENCE_MARKER_PATTERN = re.compile(r"\[\s*(/?)\s*(E\d+)\s*\]", re.IGNORECASE)
+TRUNCATION_NOTICE = "\n[Passage truncated: later text omitted]"
 
 
 class ContextBuildError(ValueError):
@@ -22,6 +27,19 @@ class ContextBuildError(ValueError):
 def count_generation_tokens(text: str) -> int:
     """Return deterministic local token accounting for Phase 9 prompt budgets."""
     return len(ENCODING.encode(text))
+
+
+def _with_supplied_text(passage: RerankedPassage, text: str) -> RerankedPassage:
+    """Return a copy whose passage text is exactly what the model receives."""
+    if text == passage.passage.text:
+        return passage
+    return replace(passage, passage=replace(passage.passage, text=text))
+
+
+def _neutralize_evidence_markers(passage: RerankedPassage) -> RerankedPassage:
+    """Rewrite bracketed E markers in passage text as inert parenthesized text."""
+    text = EVIDENCE_MARKER_PATTERN.sub(r"(\1\2)", passage.passage.text)
+    return _with_supplied_text(passage, text)
 
 
 def _page_label(passage: RerankedPassage) -> str:
@@ -65,10 +83,14 @@ def _truncate_first_passage(
     passage: RerankedPassage,
     token_budget: int,
 ) -> tuple[str, str] | None:
-    """Fit the highest-ranked passage tail-first and return its supplied text."""
+    """Fit the highest-ranked passage tail-first and return its supplied text.
+
+    The supplied text ends with an explicit truncation notice so neither the
+    generator nor the verifier mistakes a cut prefix for the complete passage.
+    """
     header = _evidence_header(passage, 1)
     footer = "\n[/E1]"
-    fixed_tokens = count_generation_tokens(header + footer)
+    fixed_tokens = count_generation_tokens(header + TRUNCATION_NOTICE + footer)
     available_text_tokens = token_budget - fixed_tokens
     if available_text_tokens <= 0:
         return None
@@ -76,7 +98,9 @@ def _truncate_first_passage(
     # Token boundaries can merge when independently encoded strings are joined.
     # Recheck the rendered block and trim until the complete envelope fits.
     while available_text_tokens > 0:
-        truncated_text = ENCODING.decode(passage_tokens[:available_text_tokens])
+        truncated_text = (
+            ENCODING.decode(passage_tokens[:available_text_tokens]) + TRUNCATION_NOTICE
+        )
         rendered = header + truncated_text + footer
         if count_generation_tokens(rendered) <= token_budget:
             return rendered, truncated_text
@@ -109,6 +133,10 @@ def build_context(
     if ranks != sorted(ranks) or len(ranks) != len(set(ranks)):
         raise ContextBuildError("passages must be in unique reranking order")
 
+    # Neutralize before budgeting so token counts, included passages, and the
+    # downstream evidence registry all describe the text actually sent.
+    passages = [_neutralize_evidence_markers(passage) for passage in passages]
+
     blocks: list[str] = []
     included: list[RerankedPassage] = []
     excluded: list[str] = []
@@ -132,12 +160,8 @@ def build_context(
         truncated_block, supplied_text = truncated_result
         # Downstream citation and verification code must receive the exact text
         # supplied to generation, never the broader original chunk tail.
-        supplied_passage = replace(
-            passages[0],
-            passage=replace(passages[0].passage, text=supplied_text),
-        )
         blocks = [truncated_block]
-        included = [supplied_passage]
+        included = [_with_supplied_text(passages[0], supplied_text)]
         used_tokens = count_generation_tokens(truncated_block)
         truncated = (passages[0].passage.chunk_id,)
         excluded = [
