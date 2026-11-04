@@ -14,6 +14,13 @@ from app.rag.reranking.models import RerankedPassage
 # Citations are rendered only by the server; numbered markers, E IDs, or source
 # labels inside model text would display provenance the registry never issued.
 EMBEDDED_CITATION_PATTERN = re.compile(r"\[\s*\d+\s*\]|\bE\d+\b|\bsources?\s*:", re.IGNORECASE)
+# Claim text is pasted into the verifier prompt next to the server's evidence.
+# Line breaks (every separator str.splitlines() honors) or the prompt's own
+# labels would let a manipulated draft append fake "evidence" for the verifier.
+VERIFIER_PROMPT_STRUCTURE_PATTERN = re.compile(
+    r"[\n\r\v\f\x1c-\x1e\x85  ]|\bCLAIM\s+\d+\s*:|\bCITED\s+EVIDENCE\b",
+    re.IGNORECASE,
+)
 
 
 class EvidenceRegistry:
@@ -57,10 +64,13 @@ class EvidenceRegistry:
     def validate_claim(self, claim: GeneratedClaim) -> tuple[EvidenceRecord, ...]:
         """Resolve only IDs present in this request-specific registry.
 
-        Raises ValueError for unknown IDs or claim text carrying its own citations.
+        Raises ValueError for unknown IDs, claim text carrying its own citations,
+        or claim text that could alter the verifier prompt structure.
         """
         if EMBEDDED_CITATION_PATTERN.search(claim.text):
             raise ValueError("Claim text must not contain citation markers or source labels")
+        if VERIFIER_PROMPT_STRUCTURE_PATTERN.search(claim.text):
+            raise ValueError("Claim text must be one line without verifier prompt labels")
         unknown = [item for item in claim.evidence_ids if item not in self._records]
         if unknown:
             raise ValueError(f"Unknown evidence IDs: {', '.join(unknown)}")

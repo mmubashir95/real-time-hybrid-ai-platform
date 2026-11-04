@@ -83,7 +83,10 @@ answer. Invalid or truncated draft output raises a controlled `generation_error`
 
 Claim text must not carry its own citations. A claim containing a numbered
 marker such as `[2]`, an `E` identifier, or a `Source:` label is rejected like a
-forged citation, because only the server renders citation markers. There is no correction or regeneration loop.
+forged citation, because only the server renders citation markers. Claim text
+must also be a single line without the verifier prompt's `CLAIM n:` or
+`CITED EVIDENCE` labels; otherwise a manipulated draft could append fake
+evidence to the verifier prompt. There is no correction or regeneration loop.
 
 ## Authorization and prompt-injection boundary
 
