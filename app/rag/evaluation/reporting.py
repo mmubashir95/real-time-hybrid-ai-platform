@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import hashlib
 import json
 from pathlib import Path
 from typing import Mapping
@@ -11,7 +12,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.rag.evaluation.reviews import AnswerQualitySummary
 from app.rag.evaluation.operations import OperationalSummary
-from app.rag.evaluation.runner import AggregateRetrievalResult, QuestionResult
+from app.rag.evaluation.runner import (
+    AggregateRetrievalResult,
+    CandidateRecord,
+    EvaluationConfiguration,
+    QuestionResult,
+)
 
 
 class RerankerRuntime(BaseModel):
@@ -51,6 +57,10 @@ class RunMetadata(BaseModel):
     embedding_model: str
     reranker_model: str | None = None
     reranker_runtime: RerankerRuntime | None = None
+    # A reranked run (D) names the hybrid run (C) whose persisted candidates it
+    # was verified against, so the C/D comparison is traceable to exact inputs.
+    baseline_run_id: str | None = None
+    baseline_artifact_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     llm_model: str | None = None
     prompt_version: str | None = None
     evaluation_configuration: str
@@ -89,6 +99,67 @@ def read_artifact(path: Path) -> EvaluationArtifact:
     return EvaluationArtifact.model_validate_json(path.read_text(encoding="utf-8"))
 
 
+class CandidateBaseline(BaseModel):
+    """Hold one verified hybrid run's candidates for a fixed-set reranker run."""
+
+    model_config = ConfigDict(frozen=True)
+
+    run_id: str
+    artifact_sha256: str
+    candidates_by_question: Mapping[str, tuple[CandidateRecord, ...]]
+
+
+def load_candidate_baseline(
+    path: Path,
+    *,
+    dataset_sha256: str,
+    dataset_split: str,
+    corpus_snapshot: str,
+    index_version: str,
+    embedding_model: str,
+    candidate_limit: int,
+    question_ids: tuple[str, ...],
+) -> CandidateBaseline:
+    """Load a configuration C artifact that a D run must reproduce exactly.
+
+    Raises ValueError when the artifact is not a hybrid run, was produced
+    against different dataset, corpus, index, embedding, or candidate-limit
+    settings, or lacks a successful result for any requested question. These
+    checks make an unfair C/D comparison fail instead of being reported.
+    """
+    raw = path.read_bytes()
+    artifact = EvaluationArtifact.model_validate_json(raw)
+    metadata = artifact.metadata
+    if metadata.evaluation_configuration != EvaluationConfiguration.HYBRID.value:
+        raise ValueError("The candidate baseline must be a configuration C run")
+    expected = {
+        "dataset_sha256": dataset_sha256,
+        "dataset_split": dataset_split,
+        "corpus_snapshot": corpus_snapshot,
+        "index_version": index_version,
+        "embedding_model": embedding_model,
+        "candidate_limit": candidate_limit,
+    }
+    for field, value in expected.items():
+        if getattr(metadata, field) != value:
+            raise ValueError(f"Candidate baseline {field} does not match this run")
+    results = {item.question_id: item for item in artifact.per_question}
+    candidates_by_question: dict[str, tuple[CandidateRecord, ...]] = {}
+    for question_id in question_ids:
+        result = results.get(question_id)
+        # A failed or absent C question has no candidate set to hold fixed.
+        if result is None or result.error_code is not None:
+            raise ValueError(
+                f"Candidate baseline has no successful result for {question_id}"
+            )
+        candidates_by_question[question_id] = result.candidates
+    return CandidateBaseline(
+        run_id=metadata.run_id,
+        artifact_sha256=hashlib.sha256(raw).hexdigest(),
+        candidates_by_question=candidates_by_question,
+    )
+
+
 def _metric(value: float | None) -> str:
     """Render absent measurements explicitly instead of inventing zero."""
     return "NOT MEASURED" if value is None else f"{value:.4f}"
@@ -113,6 +184,11 @@ def render_markdown_report(artifact: EvaluationArtifact) -> str:
         f"- Index version: `{metadata.index_version}`",
         f"- Test environment: {metadata.test_environment}",
     ]
+    if metadata.baseline_run_id is not None:
+        lines.append(
+            f"- Candidate baseline (C) run: `{metadata.baseline_run_id}` "
+            f"(artifact SHA-256 `{metadata.baseline_artifact_sha256}`)"
+        )
     runtime = metadata.reranker_runtime
     if runtime is not None:
         truncated = (

@@ -11,12 +11,14 @@ from app.rag.evaluation.reporting import (
     EvaluationArtifact,
     RerankerRuntime,
     RunMetadata,
+    load_candidate_baseline,
     read_artifact,
     render_markdown_report,
     write_artifact,
 )
 from app.rag.evaluation.runner import (
     CandidateRecord,
+    CandidateSetMismatchError,
     EvaluationConfiguration,
     aggregate_question_results,
     assert_fixed_candidate_set,
@@ -167,6 +169,83 @@ class EvaluationRunnerTests(unittest.TestCase):
         self.assertIn("precision `bfloat16`", report)
         self.assertIn("Reranker truncated inputs: 2", report)
         self.assertIn("`Q1`", report)
+
+    def test_candidate_set_mismatch_has_run_level_error_type(self) -> None:
+        """Let callers abort a run instead of recording one failed question."""
+        with self.assertRaises(CandidateSetMismatchError):
+            assert_fixed_candidate_set((candidate("A", 1),), (candidate("B", 1),))
+
+
+def _hybrid_artifact(**metadata_overrides: object) -> EvaluationArtifact:
+    """Build a configuration C artifact with one successful and one failed question."""
+    values: dict[str, object] = dict(
+        run_id="c-run", timestamp="2026-11-05T12:00:00Z",
+        dataset_id="dataset", dataset_version="1.1.0",
+        dataset_split="development", dataset_sha256="a" * 64,
+        corpus_snapshot="manifest-sha", index_version="index-1",
+        embedding_model="embedding", evaluation_configuration="C",
+        candidate_limit=20, test_environment="unit-test",
+    )
+    values.update(metadata_overrides)
+    ok = build_question_result(
+        "Q1", EvaluationConfiguration.HYBRID, (candidate("A", 1), candidate("B", 2)), {}, 1.0
+    )
+    failed = build_question_result(
+        "Q2", EvaluationConfiguration.HYBRID, (), {}, 1.0, error_code="retrieval_error"
+    )
+    return EvaluationArtifact(metadata=RunMetadata(**values), per_question=(ok, failed))
+
+
+class CandidateBaselineTests(unittest.TestCase):
+    """Verify D can only be compared against a matching, complete C run."""
+
+    expected = dict(
+        dataset_sha256="a" * 64, dataset_split="development",
+        corpus_snapshot="manifest-sha", index_version="index-1",
+        embedding_model="embedding", candidate_limit=20,
+    )
+
+    def _load(self, artifact: EvaluationArtifact, question_ids: tuple[str, ...]):
+        """Persist an artifact and load it as a candidate baseline."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "run.json"
+            write_artifact(artifact, path)
+            return load_candidate_baseline(path, question_ids=question_ids, **self.expected)
+
+    def test_matching_hybrid_run_yields_candidates_and_identity(self) -> None:
+        """Expose C's candidates per question plus a traceable artifact hash."""
+        baseline = self._load(_hybrid_artifact(), ("Q1",))
+        self.assertEqual(baseline.run_id, "c-run")
+        self.assertRegex(baseline.artifact_sha256, r"^[0-9a-f]{64}$")
+        self.assertEqual(
+            [item.chunk_id for item in baseline.candidates_by_question["Q1"]],
+            ["chk_A", "chk_B"],
+        )
+
+    def test_incomparable_or_incomplete_baselines_are_rejected(self) -> None:
+        """Refuse wrong configuration, drifted settings, and unusable questions."""
+        cases = (
+            (_hybrid_artifact(evaluation_configuration="B"), ("Q1",), "configuration C"),
+            (_hybrid_artifact(index_version="index-2"), ("Q1",), "index_version"),
+            (_hybrid_artifact(corpus_snapshot="other"), ("Q1",), "corpus_snapshot"),
+            (_hybrid_artifact(candidate_limit=10), ("Q1",), "candidate_limit"),
+            (_hybrid_artifact(dataset_sha256="b" * 64), ("Q1",), "dataset_sha256"),
+            (_hybrid_artifact(), ("Q2",), "no successful result for Q2"),
+            (_hybrid_artifact(), ("Q3",), "no successful result for Q3"),
+        )
+        for artifact, question_ids, message in cases:
+            with self.subTest(message=message):
+                with self.assertRaisesRegex(ValueError, message):
+                    self._load(artifact, question_ids)
+
+    def test_baseline_identity_is_reported(self) -> None:
+        """Show which C run a D report was verified against."""
+        artifact = EvaluationArtifact(metadata=RunMetadata(
+            **{**_hybrid_artifact().metadata.model_dump(), "evaluation_configuration": "D",
+               "baseline_run_id": "c-run", "baseline_artifact_sha256": "c" * 64},
+        ))
+        report = render_markdown_report(artifact)
+        self.assertIn("Candidate baseline (C) run: `c-run`", report)
 
 
 if __name__ == "__main__":

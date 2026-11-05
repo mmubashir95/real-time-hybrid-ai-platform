@@ -222,6 +222,14 @@ def aggregate_question_results(
     )
 
 
+class CandidateSetMismatchError(ValueError):
+    """Signal that a reranked run did not receive the baseline's candidates.
+
+    This is a run-level comparability failure, not a per-question error, so
+    callers must abort instead of recording it as one failed question.
+    """
+
+
 def assert_fixed_candidate_set(
     baseline: tuple[CandidateRecord, ...],
     reranked: tuple[CandidateRecord, ...],
@@ -234,4 +242,4 @@ def assert_fixed_candidate_set(
     if len(reranked_ids) != len(set(reranked_ids)):
         raise ValueError("Reranked candidates must have unique chunk IDs")
     if set(baseline_ids) != set(reranked_ids):
-        raise ValueError("Reranker comparison must preserve the candidate set")
+        raise CandidateSetMismatchError("Reranker comparison must preserve the candidate set")

@@ -20,9 +20,11 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from app.rag.evaluation.dataset import load_evaluation_dataset  # noqa: E402
 from app.rag.evaluation.reporting import (  # noqa: E402
+    CandidateBaseline,
     EvaluationArtifact,
     RerankerRuntime,
     RunMetadata,
+    load_candidate_baseline,
     new_timestamp,
     write_artifact,
     write_markdown_report,
@@ -38,6 +40,8 @@ from app.rag.evaluation.reviews import (  # noqa: E402
     summarize_answer_reviews,
 )
 from app.rag.evaluation.runner import (  # noqa: E402
+    CandidateRecord,
+    CandidateSetMismatchError,
     EvaluationConfiguration,
     QuestionResult,
     aggregate_question_results,
@@ -81,6 +85,10 @@ def parse_args(arguments: list[str] | None = None) -> argparse.Namespace:
         choices=("auto", "float32", "float16", "bfloat16"), default="auto",
     )
     parser.add_argument("--local-files-only", action="store_true")
+    parser.add_argument(
+        "--candidate-baseline", type=Path,
+        help="Configuration C run.json whose candidates a live D run must reproduce",
+    )
     return parser.parse_args(arguments)
 
 
@@ -135,6 +143,7 @@ def build_artifact(
     live_operational_samples: tuple[OperationalSample, ...] | None = None,
     live_grounded_answers: tuple[dict[str, object], ...] | None = None,
     live_reranker_runtime: RerankerRuntime | None = None,
+    candidate_baseline: CandidateBaseline | None = None,
 ) -> EvaluationArtifact:
     """Validate all supplied evidence and assemble one immutable run artifact."""
     dataset = load_evaluation_dataset(
@@ -214,6 +223,10 @@ def build_artifact(
             embedding_model=arguments.embedding_model,
             reranker_model=arguments.reranker_model,
             reranker_runtime=live_reranker_runtime,
+            baseline_run_id=candidate_baseline.run_id if candidate_baseline else None,
+            baseline_artifact_sha256=(
+                candidate_baseline.artifact_sha256 if candidate_baseline else None
+            ),
             llm_model=arguments.llm_model,
             prompt_version=arguments.prompt_version,
             evaluation_configuration=configuration.value,
@@ -230,6 +243,29 @@ def build_artifact(
     )
 
 
+def _load_candidate_baseline(arguments: argparse.Namespace) -> CandidateBaseline:
+    """Load the C run a live D run must match, checked against this run's settings."""
+    if arguments.candidate_baseline is None:
+        raise ValueError(
+            "Live configuration D requires --candidate-baseline so the reranker "
+            "is compared on the same candidates as configuration C"
+        )
+    dataset = load_evaluation_dataset(arguments.manifest, official=not arguments.exploratory)
+    return load_candidate_baseline(
+        arguments.candidate_baseline,
+        dataset_sha256=dataset.manifest.records_sha256,
+        dataset_split=arguments.split,
+        corpus_snapshot=arguments.corpus_snapshot,
+        index_version=arguments.index_version,
+        embedding_model=arguments.embedding_model,
+        candidate_limit=arguments.candidate_limit,
+        question_ids=tuple(
+            item.question_id for item in dataset.questions
+            if item.dataset_split.value == arguments.split
+        ),
+    )
+
+
 def _section_key(headings: tuple[str, ...]) -> str:
     """Extract the stable bracketed source key from passage headings."""
     for heading in reversed(headings):
@@ -238,8 +274,21 @@ def _section_key(headings: tuple[str, ...]) -> str:
     return ""
 
 
+def _retrieved_candidates(passages: tuple) -> tuple[CandidateRecord, ...]:
+    """Describe retrieved passages by identity only, for candidate-set checks."""
+    return tuple(
+        CandidateRecord(
+            rank=rank, chunk_id=item.chunk_id, tenant_id=item.tenant_id,
+            document_id=item.document_id, document_version=item.document_version,
+            section_key=_section_key(item.section), relevance_grade=0,
+        )
+        for rank, item in enumerate(passages, start=1)
+    )
+
+
 async def _execute_live(
     arguments: argparse.Namespace,
+    candidate_baseline: CandidateBaseline | None = None,
 ) -> tuple[
     tuple[QuestionResult, ...],
     tuple[OperationalSample, ...],
@@ -267,7 +316,8 @@ async def _execute_live(
         SearchContextOrigin, SearchFilters, SearchMode, SearchRequest, TrustedSearchContext,
     )
     from app.rag.evaluation.runner import (
-        CandidateRecord, build_question_result, gold_relevance, match_gold_evidence,
+        assert_fixed_candidate_set, build_question_result, gold_relevance,
+        match_gold_evidence,
     )
 
     if not arguments.database_url:
@@ -467,6 +517,13 @@ async def _execute_live(
                     rerank_scores: dict[str, float] = {}
                     latency_ms = search.diagnostics.total_seconds * 1_000
                     if configuration is EvaluationConfiguration.HYBRID_RERANKED:
+                        # Retrieval is re-run, so prove it returned exactly the
+                        # candidates C scored before attributing any change to
+                        # the reranker. A mismatch aborts the whole run.
+                        assert_fixed_candidate_set(
+                            candidate_baseline.candidates_by_question[question.question_id],
+                            _retrieved_candidates(passages),
+                        )
                         original_chunk_ids = {item.chunk_id for item in passages}
                         reranked = await asyncio.to_thread(
                             reranker.rerank, question.query, passages,
@@ -517,7 +574,7 @@ async def _execute_live(
                 question_results.append(build_question_result(
                     question.question_id, configuration, candidates, gold, latency_ms
                 ))
-            except asyncio.CancelledError:
+            except (asyncio.CancelledError, CandidateSetMismatchError):
                 raise
             except Exception as error:
                 # A failed question remains in denominators with a stable class;
@@ -558,13 +615,18 @@ def main(arguments: list[str] | None = None) -> int:
     parsed = parse_args(arguments)
     try:
         live_results = live_operations = live_answers = live_runtime = None
+        candidate_baseline = None
         if parsed.execute_live:
             if parsed.question_results or parsed.operational_samples:
                 raise ValueError(
                     "--execute-live cannot be combined with supplied result samples"
                 )
+            if parsed.configuration == EvaluationConfiguration.HYBRID_RERANKED.value:
+                candidate_baseline = _load_candidate_baseline(parsed)
+            elif parsed.candidate_baseline is not None:
+                raise ValueError("--candidate-baseline applies only to configuration D")
             live_results, live_operations, live_answers, live_runtime = asyncio.run(
-                _execute_live(parsed)
+                _execute_live(parsed, candidate_baseline)
             )
         artifact = build_artifact(
             parsed,
@@ -572,6 +634,7 @@ def main(arguments: list[str] | None = None) -> int:
             live_operational_samples=live_operations,
             live_grounded_answers=live_answers,
             live_reranker_runtime=live_runtime,
+            candidate_baseline=candidate_baseline,
         )
         run_directory = parsed.output_directory / artifact.metadata.run_id
         write_artifact(artifact, run_directory / "run.json")

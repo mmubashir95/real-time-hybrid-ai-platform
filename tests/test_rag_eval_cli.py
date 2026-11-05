@@ -52,6 +52,18 @@ class EvaluationCliTests(unittest.TestCase):
             self.assertIn("approved dataset manifest", errors.getvalue())
             self.assertEqual(list(output.iterdir()), [])
 
+    def test_live_reranked_run_requires_candidate_baseline(self) -> None:
+        """Refuse a D run that could silently use different candidates than C."""
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            arguments = _arguments(output)
+            arguments[arguments.index("C")] = "D"
+            with patch("sys.stderr", io.StringIO()) as errors:
+                code = CLI.main([*arguments, "--exploratory", "--execute-live"])
+            self.assertEqual(code, 1)
+            self.assertIn("--candidate-baseline", errors.getvalue())
+            self.assertEqual(list(output.iterdir()), [])
+
     def test_exploratory_run_writes_pending_json_and_markdown(self) -> None:
         """Create honest artifacts without fabricating unsupplied measurements."""
         with tempfile.TemporaryDirectory() as directory:
