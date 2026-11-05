@@ -47,7 +47,9 @@ def evaluate_ranking(
     Precision uses K as its denominator even when fewer than K unique results
     are returned. Recall, coverage, MRR, and NDCG are undefined for no-answer
     questions and therefore return None instead of an artificial perfect score.
-    Duplicate source anchors receive credit only on their first occurrence.
+    Only the first K chunk positions are scored. Duplicate source anchors in
+    that window receive credit only on their first occurrence, at its
+    original chunk rank.
     """
     if isinstance(k, bool) or not isinstance(k, int):
         raise TypeError("k must be an integer")
@@ -56,31 +58,29 @@ def evaluate_ranking(
     if any(grade <= 0 for grade in gold_relevance.values()):
         raise ValueError("Gold relevance grades must be positive")
 
-    unique_ranked: list[RankedEvidence] = []
+    # Cut at K chunk positions first, then deduplicate inside that window.
+    # Deduplicating first would reach past position K to refill the list and
+    # would compress ranks, crediting a gold item retrieved at chunk rank K+1.
+    unique_ranked: list[tuple[int, RankedEvidence]] = []
     seen: set[EvidenceKey] = set()
-    for item in ranked:
+    for chunk_rank, item in enumerate(ranked[:k], start=1):
         if item.key not in seen:
             seen.add(item.key)
-            unique_ranked.append(item)
-        if len(unique_ranked) == k:
-            break
+            unique_ranked.append((chunk_rank, item))
 
-    relevant = [item for item in unique_ranked if item.key in gold_relevance]
+    relevant = [(rank, item) for rank, item in unique_ranked if item.key in gold_relevance]
     precision = len(relevant) / k
     if not gold_relevance:
         return RetrievalMetrics(precision, None, None, None, None, len(unique_ranked))
 
-    found = {item.key for item in relevant}
+    found = {item.key for _, item in relevant}
     recall = len(found) / len(gold_relevance)
-    first_rank = next(
-        (rank for rank, item in enumerate(unique_ranked, start=1) if item.key in gold_relevance),
-        None,
-    )
+    # Ranks are original chunk positions, so duplicates still cost rank.
+    first_rank = relevant[0][0] if relevant else None
     reciprocal_rank = 1.0 / first_rank if first_rank else 0.0
     dcg = sum(
-        (2 ** gold_relevance.get(item.key, 0) - 1) / log2(rank + 1)
-        for rank, item in enumerate(unique_ranked, start=1)
-        if item.key in gold_relevance
+        (2 ** gold_relevance[item.key] - 1) / log2(rank + 1)
+        for rank, item in relevant
     )
     ideal_grades = sorted(gold_relevance.values(), reverse=True)[:k]
     ideal_dcg = sum(

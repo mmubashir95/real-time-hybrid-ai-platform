@@ -53,6 +53,17 @@ class RankingMetricTests(unittest.TestCase):
         self.assertEqual(result.recall_at_k, 0.5)
         self.assertFalse(result.complete_evidence_coverage_at_k)
 
+    def test_duplicates_do_not_stretch_window_or_compress_ranks(self) -> None:
+        """Score gold at chunk rank 6 as outside K=5, and duplicates keep rank cost."""
+        ranked = (RankedEvidence(X),) * 5 + (RankedEvidence(A),)
+        at_5 = evaluate_ranking(ranked, {A: 1}, 5)
+        self.assertEqual(at_5.recall_at_k, 0.0)
+        self.assertEqual(at_5.reciprocal_rank_at_k, 0.0)
+        self.assertEqual(at_5.unique_returned_at_k, 1)
+        at_10 = evaluate_ranking(ranked, {A: 1}, 10)
+        self.assertEqual(at_10.recall_at_k, 1.0)
+        self.assertAlmostEqual(at_10.reciprocal_rank_at_k, 1 / 6)
+
     def test_no_answer_relevance_metrics_are_undefined(self) -> None:
         """Keep no-answer questions separate from standard recall and NDCG."""
         result = evaluate_ranking((RankedEvidence(X),), {}, 5)
