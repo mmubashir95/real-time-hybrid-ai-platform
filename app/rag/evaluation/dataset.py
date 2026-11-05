@@ -53,7 +53,13 @@ class DatasetSplit(str, Enum):
 
 
 class GoldEvidence(BaseModel):
-    """Identify one stable source section required to answer a question."""
+    """Identify one required fact by its canonical section and exact quote.
+
+    The synthetic corpus repeats controlling sentences across sections, so
+    equivalent_sections lists other sections of the same document version that
+    a reviewer accepts as carrying the same fact. Scoring credits any of them
+    only when the passage also contains source_quote.
+    """
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
@@ -64,6 +70,17 @@ class GoldEvidence(BaseModel):
     source_reference: str = Field(min_length=1)
     source_quote: str = Field(min_length=1)
     relevance_grade: int = Field(default=1, ge=1, le=3)
+    equivalent_sections: tuple[str, ...] = Field(default=())
+
+    @model_validator(mode="after")
+    def validate_equivalent_sections(self) -> GoldEvidence:
+        """Keep equivalent sections unique and distinct from the canonical one."""
+        sections = (self.section_key, *self.equivalent_sections)
+        if any(not section for section in self.equivalent_sections):
+            raise ValueError("equivalent_sections must not contain empty values")
+        if len(sections) != len(set(sections)):
+            raise ValueError("equivalent_sections must be unique and exclude section_key")
+        return self
 
 
 class EvaluationQuestion(BaseModel):
@@ -246,9 +263,9 @@ def _validate_questions(
             source = corpus.get(source_key)
             if source is None:
                 raise ValueError(f"Unresolved document version: {question.question_id}")
-            section_key = (*source_key, evidence.section_key, evidence.source_reference)
-            if section_key not in sections:
-                raise ValueError(f"Unresolved source section: {question.question_id}")
+            for section in (evidence.section_key, *evidence.equivalent_sections):
+                if (*source_key, section, evidence.source_reference) not in sections:
+                    raise ValueError(f"Unresolved source section: {question.question_id}")
             expected_status = (
                 "archived"
                 if question.question_type is QuestionType.HISTORICAL_VERSION

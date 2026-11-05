@@ -7,6 +7,7 @@ from typing import Iterable
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.rag.evaluation.dataset import GoldEvidence
 from app.rag.evaluation.metrics import (
     EvidenceKey,
     RankedEvidence,
@@ -39,16 +40,66 @@ class CandidateRecord(BaseModel):
     section_key: str
     relevance_grade: int = Field(ge=0)
     score: float | None = None
+    # Canonical gold section credited for this passage when it matched through
+    # an equivalent section; None keeps the passage's own section identity.
+    credited_section_key: str | None = None
 
     @property
     def evidence_key(self) -> EvidenceKey:
-        """Return the source-level identity used by golden labels."""
+        """Return the identity used for scoring: credited gold key or own source."""
         return (
             self.tenant_id,
             self.document_id,
             self.document_version,
-            self.section_key,
+            self.credited_section_key or self.section_key,
         )
+
+
+def gold_relevance(gold_evidence: Iterable[GoldEvidence]) -> dict[EvidenceKey, int]:
+    """Map each canonical gold evidence key to its relevance grade."""
+    return {
+        (item.tenant_id, item.document_id, item.document_version, item.section_key):
+            item.relevance_grade
+        for item in gold_evidence
+    }
+
+
+def _normalize_text(text: str) -> str:
+    """Normalize case and whitespace so quote matching ignores layout."""
+    return " ".join(text.casefold().split())
+
+
+def match_gold_evidence(
+    gold_evidence: Iterable[GoldEvidence],
+    *,
+    tenant_id: str,
+    document_id: str,
+    document_version: str,
+    section_key: str,
+    passage_text: str,
+) -> tuple[int, str | None]:
+    """Return (grade, credited canonical section) for one retrieved passage.
+
+    A passage is relevant only when it comes from the labeled document version,
+    sits in the canonical or a reviewer-listed equivalent section, and contains
+    the normalized source quote. This credits repeated statements of the same
+    fact without crediting same-section chunks that lack it. Returns (0, None)
+    when nothing matches.
+    """
+    normalized_passage = _normalize_text(passage_text)
+    best: tuple[int, str | None] = (0, None)
+    for item in gold_evidence:
+        if (item.tenant_id, item.document_id, item.document_version) != (
+            tenant_id, document_id, document_version,
+        ):
+            continue
+        if section_key not in (item.section_key, *item.equivalent_sections):
+            continue
+        if _normalize_text(item.source_quote) not in normalized_passage:
+            continue
+        if item.relevance_grade > best[0]:
+            best = (item.relevance_grade, item.section_key)
+    return best
 
 
 class QuestionResult(BaseModel):

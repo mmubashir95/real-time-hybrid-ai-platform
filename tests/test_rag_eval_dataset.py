@@ -154,6 +154,22 @@ class EvaluationDatasetTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, message):
                     load_evaluation_dataset(fixture.manifest_path)
 
+    def test_equivalent_sections_must_resolve_and_be_distinct(self) -> None:
+        """Reject equivalent sections that are absent from the catalog or repeated."""
+        unresolved = _answer_record()
+        unresolved["gold_evidence"][0]["equivalent_sections"] = ["FAQ"]  # type: ignore[index]
+        duplicate = _answer_record()
+        duplicate["gold_evidence"][0]["equivalent_sections"] = ["DECISION"]  # type: ignore[index]
+        cases = (
+            (unresolved, "Unresolved source section"),
+            (duplicate, "equivalent_sections must be unique"),
+        )
+        for record, message in cases:
+            with self.subTest(message=message), tempfile.TemporaryDirectory() as directory:
+                fixture = TemporaryDataset(Path(directory), [record])
+                with self.assertRaisesRegex(ValueError, message):
+                    load_evaluation_dataset(fixture.manifest_path)
+
     def test_unresolved_readable_source_quote_is_rejected(self) -> None:
         """Ensure a catalog-valid anchor cannot carry a fabricated text quote."""
         record = _answer_record()

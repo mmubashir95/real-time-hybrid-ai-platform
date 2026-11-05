@@ -258,7 +258,9 @@ async def _execute_live(
         DenseRetriever, HistoricalVersionScope, KeywordRetriever, RetrievalService,
         SearchContextOrigin, SearchFilters, SearchMode, SearchRequest, TrustedSearchContext,
     )
-    from app.rag.evaluation.runner import CandidateRecord, build_question_result
+    from app.rag.evaluation.runner import (
+        CandidateRecord, build_question_result, gold_relevance, match_gold_evidence,
+    )
 
     if not arguments.database_url:
         raise ValueError("--database-url is required for --execute-live")
@@ -329,13 +331,22 @@ async def _execute_live(
         operation_samples: list[OperationalSample] = []
         grounded_answers: list[dict[str, object]] = []
         for question in questions:
-            gold = {
-                (
-                    item.tenant_id, item.document_id, item.document_version,
-                    item.section_key,
-                ): item.relevance_grade
-                for item in question.gold_evidence
-            }
+            gold = gold_relevance(question.gold_evidence)
+
+            def credit(
+                tenant_id: str, document_id: str, document_version: str,
+                section: tuple[str, ...], passage_text: str,
+            ) -> dict[str, object]:
+                """Return CandidateRecord relevance fields for one passage."""
+                grade, credited_section = match_gold_evidence(
+                    question.gold_evidence, tenant_id=tenant_id,
+                    document_id=document_id, document_version=document_version,
+                    section_key=_section_key(section), passage_text=passage_text,
+                )
+                return {
+                    "relevance_grade": grade,
+                    "credited_section_key": credited_section,
+                }
             historical_evidence = next(
                 iter(question.gold_evidence), None
             ) if question.question_type.value == "historical_version" else None
@@ -374,10 +385,10 @@ async def _execute_live(
                             tenant_id=item.tenant_id, document_id=item.document_id,
                             document_version=item.document_version,
                             section_key=_section_key(item.section),
-                            relevance_grade=gold.get((
+                            **credit(
                                 item.tenant_id, item.document_id,
-                                item.document_version, _section_key(item.section),
-                            ), 0),
+                                item.document_version, item.section, item.passage_text,
+                            ),
                         )
                         for rank, item in enumerate(response.evidence, start=1)
                     )
@@ -462,10 +473,10 @@ async def _execute_live(
                             tenant_id=item.tenant_id, document_id=item.document_id,
                             document_version=item.document_version,
                             section_key=_section_key(item.section),
-                            relevance_grade=gold.get((
+                            **credit(
                                 item.tenant_id, item.document_id,
-                                item.document_version, _section_key(item.section),
-                            ), 0),
+                                item.document_version, item.section, item.text,
+                            ),
                             score=(
                                 rerank_scores[item.chunk_id]
                                 if configuration is EvaluationConfiguration.HYBRID_RERANKED

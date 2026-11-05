@@ -6,6 +6,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from app.rag.evaluation.dataset import GoldEvidence
 from app.rag.evaluation.reporting import (
     EvaluationArtifact,
     RunMetadata,
@@ -19,6 +20,8 @@ from app.rag.evaluation.runner import (
     aggregate_question_results,
     assert_fixed_candidate_set,
     build_question_result,
+    gold_relevance,
+    match_gold_evidence,
 )
 
 
@@ -52,6 +55,62 @@ class EvaluationRunnerTests(unittest.TestCase):
         self.assertEqual(aggregate.failed_question_count, 1)
         self.assertEqual(aggregate.recall_at_5, 1.0)
         self.assertEqual(aggregate.latency_p50_ms, 10.0)
+
+    def test_equivalent_section_with_quote_is_credited_once_to_canonical_key(self) -> None:
+        """Credit repeated statements of one fact, but only at its first rank."""
+        evidence = (GoldEvidence(
+            tenant_id="asterdesk", document_id="AST-CAN-003", document_version="2.0",
+            section_key="DECISION", source_reference="documents/a.md",
+            source_quote="Paid features remain   available", relevance_grade=3,
+            equivalent_sections=("FAQ",),
+        ),)
+        passages = (
+            ("chk_faq", "FAQ", "Q: when? A: paid features remain\navailable."),
+            ("chk_doc", "DOC-CONTROL", "Owner and revision history."),
+            ("chk_decision", "DECISION", "Paid features remain available."),
+        )
+        candidates = []
+        for rank, (chunk_id, section, text) in enumerate(passages, start=1):
+            grade, credited = match_gold_evidence(
+                evidence, tenant_id="asterdesk", document_id="AST-CAN-003",
+                document_version="2.0", section_key=section, passage_text=text,
+            )
+            candidates.append(CandidateRecord(
+                rank=rank, chunk_id=chunk_id, tenant_id="asterdesk",
+                document_id="AST-CAN-003", document_version="2.0",
+                section_key=section, relevance_grade=grade,
+                credited_section_key=credited,
+            ))
+        self.assertEqual(candidates[0].evidence_key[3], "DECISION")
+        self.assertEqual(candidates[0].relevance_grade, 3)
+        self.assertEqual(candidates[1].relevance_grade, 0)
+        result = build_question_result(
+            "Q1", EvaluationConfiguration.HYBRID, tuple(candidates),
+            gold_relevance(evidence), 1.0,
+        )
+        self.assertEqual(result.reciprocal_rank_at_10, 1.0)
+        self.assertEqual(result.recall_at_5, 1.0)
+        # The fact counts once; the later DECISION duplicate earns no extra precision.
+        self.assertEqual(result.precision_at_5, 0.2)
+
+    def test_quote_or_section_mismatch_is_not_credited(self) -> None:
+        """Reject unlisted sections, other versions, and gold sections lacking the fact."""
+        evidence = (GoldEvidence(
+            tenant_id="asterdesk", document_id="AST-CAN-003", document_version="2.0",
+            section_key="DECISION", source_reference="documents/a.md",
+            source_quote="paid-through timestamp", equivalent_sections=("FAQ",),
+        ),)
+        cases = (
+            ("2.0", "SCOPE", "Access lasts to the paid-through timestamp."),
+            ("1.0", "DECISION", "Access lasts to the paid-through timestamp."),
+            ("2.0", "DECISION", "This chunk of the gold section omits the fact."),
+        )
+        for version, section, text in cases:
+            with self.subTest(version=version, section=section):
+                self.assertEqual(match_gold_evidence(
+                    evidence, tenant_id="asterdesk", document_id="AST-CAN-003",
+                    document_version=version, section_key=section, passage_text=text,
+                ), (0, None))
 
     def test_reranker_must_preserve_identical_candidate_set(self) -> None:
         """Allow reordering but reject introduced or missing passages."""

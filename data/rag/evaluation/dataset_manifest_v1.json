@@ -1,9 +1,9 @@
 {
   "dataset_id": "month2-rag-golden-candidates",
-  "dataset_version": "1.0.0",
+  "dataset_version": "1.1.0",
   "review_status": "needs_review",
   "records_path": "golden_questions_v1.jsonl",
-  "records_sha256": "405380bdc107fb8acc6ddda6320a94ca695d6e4e63a9f609eb58ad4e116828a5",
+  "records_sha256": "7e7f2ad638be53b0ec4d8f32f9248fbe609f9ed730197ad9d16c861baacc67db",
   "corpus_manifest_path": "../manifest.csv",
   "corpus_manifest_sha256": "9c2ce177ccf5705716dcd91c8c5cd7b165702a5ef5ac7ab76e920c86fdc1a2fb",
   "sections_index_path": "../sections_index.csv",
