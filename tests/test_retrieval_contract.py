@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+from datetime import date
 import unittest
 
 from app.rag.persistence.lifecycle import EmbeddingProfile
@@ -12,6 +14,7 @@ from app.rag.retrieval import (
     SearchRequest,
     TrustedSearchContext,
 )
+from app.rag.retrieval.keyword import KeywordRetriever
 
 
 PROFILE = EmbeddingProfile(
@@ -20,6 +23,32 @@ PROFILE = EmbeddingProfile(
 CONTEXT = TrustedSearchContext(
     "tenant-a", ("public",), SearchContextOrigin.INTERNAL
 )
+
+
+class _RecordingConnection:
+    """Capture SQL parameters the way asyncpg receives them, without a database."""
+
+    def __init__(self) -> None:
+        """Start with no recorded fetch arguments."""
+        self.fetch_arguments: tuple[object, ...] = ()
+
+    def transaction(self) -> _RecordingConnection:
+        """Act as the transaction context manager."""
+        return self
+
+    async def __aenter__(self) -> None:
+        """Enter the fake transaction."""
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        """Leave the fake transaction."""
+
+    async def execute(self, *arguments: object) -> None:
+        """Accept the search_path statement."""
+
+    async def fetch(self, query: str, *arguments: object) -> list[object]:
+        """Record bound parameters and return no rows."""
+        self.fetch_arguments = arguments
+        return []
 
 
 class SearchContractTests(unittest.TestCase):
@@ -52,6 +81,23 @@ class SearchContractTests(unittest.TestCase):
                 "valid", SearchMode.HYBRID, SearchFilters(), 5, CONTEXT, PROFILE,
                 keyword_candidate_limit=True,
             )
+
+    def test_effective_date_bounds_are_date_values(self) -> None:
+        """Convert ISO strings to dates, leaving absent bounds as None."""
+        filters = SearchFilters(effective_date_from="2026-01-01")
+        self.assertEqual(filters.effective_date_bounds(), (date(2026, 1, 1), None))
+        self.assertEqual(SearchFilters().effective_date_bounds(), (None, None))
+
+    def test_keyword_sql_binds_effective_dates_as_date_objects(self) -> None:
+        """Regression: asyncpg rejects str for ``$n::date``, so bind date values."""
+        connection = _RecordingConnection()
+        filters = SearchFilters(
+            effective_date_from="2025-06-01", effective_date_to="2026-01-01"
+        )
+        asyncio.run(KeywordRetriever(connection).search("q", CONTEXT, filters, 5))
+        self.assertEqual(
+            connection.fetch_arguments[-2:], (date(2025, 6, 1), date(2026, 1, 1))
+        )
 
     def test_filters_validate_dates_and_narrowing_values(self) -> None:
         """Reject malformed metadata filters at the service boundary."""

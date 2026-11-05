@@ -83,6 +83,20 @@ class GoldEvidence(BaseModel):
         return self
 
 
+class HistoricalScope(BaseModel):
+    """Name the archived document version a historical question is asked about.
+
+    This is part of the question input, as a user or caller would supply it.
+    It is kept separate from gold_evidence so retrieval scope is never derived
+    from the answer labels being scored.
+    """
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    document_id: str = Field(min_length=1)
+    document_version: str = Field(min_length=1)
+
+
 class EvaluationQuestion(BaseModel):
     """Represent one candidate or human-approved golden evaluation question."""
 
@@ -102,6 +116,7 @@ class EvaluationQuestion(BaseModel):
     reviewed_at: datetime | None = None
     dataset_split: DatasetSplit
     leakage_group: str = Field(min_length=1, max_length=100)
+    historical_scope: HistoricalScope | None = None
 
     @model_validator(mode="after")
     def validate_label_consistency(self) -> EvaluationQuestion:
@@ -115,6 +130,12 @@ class EvaluationQuestion(BaseModel):
                 raise ValueError("Gold evidence tenant must match the question tenant")
         elif self.expected_answer is not None or self.required_facts or self.gold_evidence:
             raise ValueError("Abstention and denial questions must not contain answer evidence")
+
+        is_historical = self.question_type is QuestionType.HISTORICAL_VERSION
+        if is_historical and self.historical_scope is None:
+            raise ValueError("Historical-version questions require historical_scope")
+        if not is_historical and self.historical_scope is not None:
+            raise ValueError("Only historical-version questions may set historical_scope")
 
         has_review_identity = self.reviewed_by is not None or self.reviewed_at is not None
         if self.review_status is ReviewStatus.APPROVED:
@@ -257,6 +278,17 @@ def _validate_questions(
 
         if official and question.review_status is not ReviewStatus.APPROVED:
             raise ValueError(f"Official evaluation requires approval: {question.question_id}")
+
+        scope = question.historical_scope
+        if scope is not None:
+            scoped_source = corpus.get(
+                (question.tenant_id, scope.document_id, scope.document_version)
+            )
+            if scoped_source is None or scoped_source["status"] != "archived":
+                raise ValueError(
+                    f"historical_scope must name an archived document version: "
+                    f"{question.question_id}"
+                )
 
         for evidence in question.gold_evidence:
             source_key = (evidence.tenant_id, evidence.document_id, evidence.document_version)

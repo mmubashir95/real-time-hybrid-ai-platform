@@ -6,7 +6,6 @@ import asyncio
 from dataclasses import replace
 from datetime import date
 import hashlib
-import os
 from pathlib import Path
 import unittest
 from uuid import uuid4
@@ -35,6 +34,8 @@ from app.rag.persistence.lifecycle import (
     withdraw_document_version,
 )
 
+from database_gate import TEST_DATABASE_URL, requires_test_database
+
 
 ROOT = Path(__file__).resolve().parent.parent
 # Migration 001 is database-scoped; applying it here lets each suite run on
@@ -47,7 +48,6 @@ RAG_MIGRATION_SQL = (ROOT / "migrations/002_create_rag_schema.sql").read_text(
 LIFECYCLE_MIGRATION_SQL = (
     ROOT / "migrations/003_add_document_lifecycle.sql"
 ).read_text(encoding="utf-8")
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "")
 MODEL_ID = "BAAI/bge-small-en-v1.5"
 MODEL_REVISION = "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a"
 CONFIG_FINGERPRINT = "c" * 64
@@ -166,7 +166,7 @@ class ChunkManifestFingerprintTests(unittest.TestCase):
             chunk_ids_fingerprint(["chk_a", "chk_a"])
 
 
-@unittest.skipUnless(TEST_DATABASE_URL, "TEST_DATABASE_URL is not set")
+@requires_test_database()
 class DocumentLifecycleIntegrationTests(unittest.IsolatedAsyncioTestCase):
     """Exercise lifecycle transitions in isolated real PostgreSQL schemas."""
 

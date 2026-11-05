@@ -6,13 +6,14 @@ These tests never install extensions or modify existing application schemas.
 
 from collections.abc import Awaitable
 from datetime import date
-import os
 from pathlib import Path
 import unittest
 from uuid import uuid4
 
 import asyncpg
 from sqlalchemy.engine import make_url
+
+from database_gate import TEST_DATABASE_URL, requires_test_database
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -21,11 +22,10 @@ ROOT = Path(__file__).resolve().parent.parent
 PGVECTOR_SQL = (ROOT / "migrations/001_enable_pgvector.sql").read_text()
 MIGRATION_SQL = (ROOT / "migrations/002_create_rag_schema.sql").read_text()
 INITIAL_SCHEMA_SQL = (ROOT / "schema.sql").read_text()
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "")
 VECTOR = "[" + ",".join(["1"] + ["0"] * 383) + "]"
 
 
-@unittest.skipUnless(TEST_DATABASE_URL, "TEST_DATABASE_URL is not set")
+@requires_test_database()
 class RagSchemaIntegrationTests(unittest.IsolatedAsyncioTestCase):
     """Check actual constraints and migration behavior without corpus imports."""
 

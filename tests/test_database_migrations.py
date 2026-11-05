@@ -6,7 +6,6 @@ Each test owns a random schema and never modifies existing application schemas.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -17,13 +16,14 @@ from sqlalchemy.engine import make_url
 
 from scripts.migrate_database import Migration, MigrationError, MigrationRunner
 
+from database_gate import TEST_DATABASE_URL, requires_test_database
+
 
 ROOT = Path(__file__).resolve().parent.parent
 INITIAL_SCHEMA_SQL = (ROOT / "schema.sql").read_text(encoding="utf-8")
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "")
 
 
-@unittest.skipUnless(TEST_DATABASE_URL, "TEST_DATABASE_URL is not set")
+@requires_test_database()
 class DatabaseMigrationIntegrationTests(unittest.IsolatedAsyncioTestCase):
     """Exercise fresh, upgrade, repeat, drift, and recovery behavior."""
 

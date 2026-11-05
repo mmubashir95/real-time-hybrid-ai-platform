@@ -205,8 +205,7 @@ class KeywordRetriever:
                 historical_version,
                 filters.document_id,
                 filters.section,
-                filters.effective_date_from,
-                filters.effective_date_to,
+                *filters.effective_date_bounds(),
             )
 
     @staticmethod

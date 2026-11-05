@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import hashlib
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -51,6 +53,22 @@ class EvaluationCliTests(unittest.TestCase):
             self.assertEqual(code, 1)
             self.assertIn("approved dataset manifest", errors.getvalue())
             self.assertEqual(list(output.iterdir()), [])
+
+    def test_retrieval_details_persist_ranks_rrf_components_and_text_hash(self) -> None:
+        """Make hybrid diagnostics readable from the artifact without reconstruction."""
+        passage = SimpleNamespace(
+            final_rank=3, bm25_rank=2, bm25_score=7.5, semantic_rank=None,
+            semantic_score=None, fusion_score=1 / 62, text="Paid features remain.",
+        )
+        details = CLI._retrieval_details(passage, 60)
+        self.assertEqual(details["retrieval_rank"], 3)
+        self.assertAlmostEqual(details["bm25_rrf_component"], 1 / 62)
+        self.assertIsNone(details["semantic_rrf_component"])
+        self.assertEqual(
+            details["text_sha256"], hashlib.sha256(b"Paid features remain.").hexdigest()
+        )
+        # Without fusion there are no RRF components to report.
+        self.assertIsNone(CLI._retrieval_details(passage, None)["bm25_rrf_component"])
 
     def test_live_reranked_run_requires_candidate_baseline(self) -> None:
         """Refuse a D run that could silently use different candidates than C."""

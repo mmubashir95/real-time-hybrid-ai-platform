@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import date
-import os
 from pathlib import Path
 import unittest
 from uuid import uuid4
@@ -19,12 +18,13 @@ from app.rag.retrieval import (
     TrustedSearchContext,
 )
 
+from database_gate import TEST_DATABASE_URL, requires_test_database
+
 
 ROOT = Path(__file__).resolve().parent.parent
 PGVECTOR_SQL = (ROOT / "migrations/001_enable_pgvector.sql").read_text()
 RAG_SCHEMA_SQL = (ROOT / "migrations/002_create_rag_schema.sql").read_text()
 LIFECYCLE_SQL = (ROOT / "migrations/003_add_document_lifecycle.sql").read_text()
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "")
 
 
 def context(
@@ -39,7 +39,7 @@ def context(
     )
 
 
-@unittest.skipUnless(TEST_DATABASE_URL, "TEST_DATABASE_URL is not set")
+@requires_test_database()
 class KeywordSearchPostgresTests(unittest.IsolatedAsyncioTestCase):
     """Verify the lexical SQL scope in a disposable PostgreSQL schema."""
 

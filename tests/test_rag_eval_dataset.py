@@ -8,7 +8,9 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from app.rag.evaluation.dataset import load_evaluation_dataset
+from pydantic import ValidationError
+
+from app.rag.evaluation.dataset import EvaluationQuestion, load_evaluation_dataset
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -193,6 +195,29 @@ class EvaluationDatasetTests(unittest.TestCase):
                 fixture = TemporaryDataset(Path(directory), [record])
                 with self.assertRaisesRegex(ValueError, message):
                     load_evaluation_dataset(fixture.manifest_path)
+
+    def test_historical_scope_is_a_separate_question_input(self) -> None:
+        """Require scope for historical questions only, independent of gold labels."""
+        scope = {"document_id": "AST-CAN-003", "document_version": "1.0"}
+        cases = (
+            (_answer_record(question_type="historical_version"), "require historical_scope"),
+            (_answer_record(historical_scope=scope), "Only historical-version"),
+        )
+        for record, message in cases:
+            with self.subTest(message=message):
+                with self.assertRaisesRegex(ValidationError, message):
+                    EvaluationQuestion.model_validate(record)
+
+    def test_historical_scope_must_name_an_archived_version(self) -> None:
+        """Reject a scope that points at an active or unknown document version."""
+        record = _answer_record(
+            question_type="historical_version",
+            historical_scope={"document_id": "AST-CAN-003", "document_version": "2.0"},
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = TemporaryDataset(Path(directory), [record])
+            with self.assertRaisesRegex(ValueError, "archived document version"):
+                load_evaluation_dataset(fixture.manifest_path)
 
     def test_catalog_drift_is_rejected(self) -> None:
         """Detect corpus changes instead of silently evaluating a new snapshot."""

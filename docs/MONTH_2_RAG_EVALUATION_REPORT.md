@@ -11,13 +11,14 @@ human-reviewed labels and a reproducibly identified corpus.
 **PENDING HUMAN REVIEW AND LIVE EXECUTION**
 
 The evaluation implementation exists, but the current seven candidate questions
-are not approved ground truth. No quality, security, latency, token, or cost
-result is reported as measured in this document.
+are not approved ground truth. Configurations C and D have exploratory
+development-split runs (below); they are not official results. No security,
+token, or cost result is reported as measured in this document.
 
 ## Dataset
 
 - Dataset: `month2-rag-golden-candidates`
-- Version: `1.0.0`
+- Version: `1.2.0` (C/D exploratory runs used `1.0.0`; see below)
 - Candidate questions: 7
 - Approved questions: 0
 - Review status: `needs_review`
@@ -31,22 +32,39 @@ result is reported as measured in this document.
 |---|---|---|---|---|
 | A | Dense | None | No | NOT MEASURED |
 | B | BM25 | None | No | NOT MEASURED |
-| C | Hybrid RRF | None | No | NOT MEASURED |
-| D | Hybrid RRF | Qwen3 pretrained | No | NOT MEASURED |
+| C | Hybrid RRF | None | No | EXPLORATORY (`2745324e`) |
+| D | Hybrid RRF | Qwen3 pretrained | No | EXPLORATORY (`86b8e42e`) |
 | E | Hybrid RRF | Qwen3 pretrained | Yes | NOT MEASURED |
 
-## Retrieval metrics
+## Exploratory C/D results (not official)
 
-- Precision@5/10: NOT MEASURED
-- Recall@5/10/20: NOT MEASURED
-- Complete Evidence Coverage@5/10/20: NOT MEASURED
+Development split, 5 questions (4 answerable), unapproved labels. Both runs
+used dataset `1.0.0`, before equivalent-section credit (`1.1.0`) and the
+cut-at-K-then-deduplicate scoring fix, so they must be rerun before any
+official claim. Artifacts: `reports/rag_evaluation/<run_id>/`.
 
-## Reranker metrics
+| Metric | C hybrid | D hybrid + Qwen3 |
+|---|---|---|
+| Precision@5 (all 5 questions) | 0.0400 | 0.1600 |
+| Precision@5 (answerable only, ceiling 0.2500) | 0.0500 | 0.2000 |
+| Recall@5 | 0.2500 | 0.7500 |
+| Recall@10 | 0.7500 | 1.0000 |
+| Recall@20 | 1.0000 | 1.0000 |
+| Complete Evidence Coverage@5 | 0.2500 | 0.7500 |
+| MRR@10 | 0.1607 | 0.3857 |
+| NDCG@5 | 0.1250 | 0.4234 |
+| NDCG@10 | 0.3091 | 0.5067 |
+| Latency p50 / p95 ms | 35.1 / 205.4 | 1025.8 / 2053.8 |
 
-- MRR@10: NOT MEASURED
-- NDCG@5/10: NOT MEASURED
-- Helped/hurt questions: NOT MEASURED
-- Fixed-candidate preservation: IMPLEMENTED; LIVE VERIFICATION PENDING
+- Recall, coverage, MRR, and NDCG average the 4 answerable questions; the
+  all-question precision row also includes the no-answer question's zero.
+- The precision ceiling is the best P@5 any ranking could reach given the
+  gold counts (three questions with one gold section, one with two).
+- D's latency includes reranker inference and first-question warm-up.
+- Fixed-candidate preservation: verified after the fact — D's candidate set
+  equals C's for all 5 questions. Future live D runs enforce this with
+  `--candidate-baseline`.
+- Helped/hurt questions: NOT MEASURED.
 
 ## Answer and grounding quality
 
@@ -91,7 +109,7 @@ artifact with no failed questions.
 
 - Human approval is pending.
 - The initial dataset is much smaller than the planned 50–80 questions.
-- Database, Qwen3, and OpenAI evaluations have not been run in this checkpoint.
+- Only exploratory C and D runs exist; A, B, and E (OpenAI) have not been run.
 - Generator/verifier judgments cannot replace independent human review.
 - The corpus is synthetic and cannot establish performance on real policies.
 

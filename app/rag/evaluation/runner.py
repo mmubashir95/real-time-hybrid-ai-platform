@@ -43,6 +43,18 @@ class CandidateRecord(BaseModel):
     # Canonical gold section credited for this passage when it matched through
     # an equivalent section; None keeps the passage's own section identity.
     credited_section_key: str | None = None
+    # Retrieval-stage provenance, persisted so ranking diagnostics can be read
+    # from the artifact instead of reconstructed. None means the stage did not
+    # run for this configuration (for example, no BM25 rank in dense-only A).
+    retrieval_rank: int | None = Field(default=None, ge=1)
+    bm25_rank: int | None = Field(default=None, ge=1)
+    bm25_score: float | None = None
+    semantic_rank: int | None = Field(default=None, ge=1)
+    semantic_score: float | None = None
+    fusion_score: float | None = None
+    bm25_rrf_component: float | None = None
+    semantic_rrf_component: float | None = None
+    text_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
     @property
     def evidence_key(self) -> EvidenceKey:
@@ -123,6 +135,9 @@ class QuestionResult(BaseModel):
     ndcg_at_10: float | None
     latency_ms: float = Field(ge=0)
     error_code: str | None = None
+    # Number of distinct gold evidence keys; None for no-answer questions. It
+    # bounds precision: with g gold keys, P@K can never exceed min(g, K) / K.
+    gold_evidence_count: int | None = Field(default=None, ge=1)
 
 
 class AggregateRetrievalResult(BaseModel):
@@ -147,6 +162,14 @@ class AggregateRetrievalResult(BaseModel):
     ndcg_at_10: float | None
     latency_p50_ms: float | None
     latency_p95_ms: float | None
+    # Precision above averages every completed question, including no-answer
+    # ones (always 0), while recall averages answerable questions only. These
+    # answerable-only values share recall's denominator, and the ceilings are
+    # the best precision any ranking could reach given the gold counts.
+    answerable_precision_at_5: float | None = None
+    answerable_precision_at_10: float | None = None
+    precision_ceiling_at_5: float | None = None
+    precision_ceiling_at_10: float | None = None
 
 
 def build_question_result(
@@ -182,6 +205,7 @@ def build_question_result(
         ndcg_at_10=at_10.ndcg_at_k,
         latency_ms=latency_ms,
         error_code=error_code,
+        gold_evidence_count=len(gold_relevance) or None,
     )
 
 
@@ -196,6 +220,14 @@ def aggregate_question_results(
     completed = tuple(item for item in items if item.error_code is None)
     answerable = tuple(item for item in completed if item.recall_at_5 is not None)
     percentiles = latency_percentiles(tuple(item.latency_ms for item in completed))
+
+    def precision_ceiling(k: int) -> float | None:
+        """Average the best reachable P@K; unknown if any gold count is missing."""
+        counts = [item.gold_evidence_count for item in answerable]
+        known = [count for count in counts if count is not None]
+        if not counts or len(known) != len(counts):
+            return None
+        return sum(min(count, k) / k for count in known) / len(known)
 
     def coverage(name: str) -> float | None:
         values = [getattr(item, name) for item in answerable]
@@ -219,6 +251,12 @@ def aggregate_question_results(
         ndcg_at_10=mean_defined(tuple(item.ndcg_at_10 for item in answerable)),
         latency_p50_ms=percentiles[0] if percentiles else None,
         latency_p95_ms=percentiles[1] if percentiles else None,
+        answerable_precision_at_5=mean_defined(tuple(item.precision_at_5 for item in answerable)),
+        answerable_precision_at_10=mean_defined(
+            tuple(item.precision_at_10 for item in answerable)
+        ),
+        precision_ceiling_at_5=precision_ceiling(5),
+        precision_ceiling_at_10=precision_ceiling(10),
     )
 
 

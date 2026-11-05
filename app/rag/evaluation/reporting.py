@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import hashlib
-import json
 from pathlib import Path
 from typing import Mapping
 
@@ -59,6 +58,9 @@ class RunMetadata(BaseModel):
     reranker_runtime: RerankerRuntime | None = None
     # A reranked run (D) names the hybrid run (C) whose persisted candidates it
     # was verified against, so the C/D comparison is traceable to exact inputs.
+    # RRF constant used by hybrid retrieval; with the per-candidate ranks it
+    # makes every persisted RRF component recomputable.
+    rrf_constant: int | None = Field(default=None, gt=0)
     baseline_run_id: str | None = None
     baseline_artifact_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     llm_model: str | None = None
@@ -213,10 +215,18 @@ def render_markdown_report(artifact: EvaluationArtifact) -> str:
         lines.append("NOT MEASURED")
     else:
         lines.extend([
-            f"- Questions: {retrieval.question_count}",
+            f"- Questions: {retrieval.question_count} "
+            f"(answerable: {retrieval.answerable_question_count})",
             f"- Failed questions: {retrieval.failed_question_count}",
-            f"- Precision@5: {_metric(retrieval.precision_at_5)}",
-            f"- Precision@10: {_metric(retrieval.precision_at_10)}",
+            f"- Precision@5 (all completed questions): {_metric(retrieval.precision_at_5)}",
+            f"- Precision@10 (all completed questions): {_metric(retrieval.precision_at_10)}",
+            f"- Precision@5 (answerable only): "
+            f"{_metric(retrieval.answerable_precision_at_5)} "
+            f"of ceiling {_metric(retrieval.precision_ceiling_at_5)}",
+            f"- Precision@10 (answerable only): "
+            f"{_metric(retrieval.answerable_precision_at_10)} "
+            f"of ceiling {_metric(retrieval.precision_ceiling_at_10)}",
+            "- Recall, coverage, MRR, and NDCG average answerable questions only.",
             f"- Recall@5: {_metric(retrieval.recall_at_5)}",
             f"- Recall@10: {_metric(retrieval.recall_at_10)}",
             f"- Recall@20: {_metric(retrieval.recall_at_20)}",

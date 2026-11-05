@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from enum import Enum
 from math import isfinite
 from typing import Any
@@ -119,8 +120,6 @@ class SearchFilters:
 
     def __post_init__(self) -> None:
         """Reject blank values and inverted ISO-date ranges."""
-        from datetime import date
-
         for name in ("document_id", "section"):
             value = getattr(self, name)
             if value is not None and (not isinstance(value, str) or not value.strip()):
@@ -141,6 +140,17 @@ class SearchFilters:
                 raise ValueError(f"{name} must use YYYY-MM-DD") from error
         if all(parsed_dates) and parsed_dates[0] > parsed_dates[1]:
             raise ValueError("effective_date_from must not follow effective_date_to")
+
+    def effective_date_bounds(self) -> tuple[date | None, date | None]:
+        """Return the validated date range as date values for SQL parameters.
+
+        asyncpg encodes ``$n::date`` parameters from date objects and rejects
+        ISO strings, so the public string contract is converted only here.
+        """
+        return (
+            date.fromisoformat(self.effective_date_from) if self.effective_date_from else None,
+            date.fromisoformat(self.effective_date_to) if self.effective_date_to else None,
+        )
 
 
 @dataclass(frozen=True)

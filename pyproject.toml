@@ -1,0 +1,21 @@
+# Static checks for the project. Run from the repository root:
+#   .venv/bin/ruff check .
+#   .venv/bin/mypy
+# Both start deliberately narrow (correctness rules, evaluation package) so
+# they pass today; widen rule sets and mypy packages incrementally.
+
+[tool.ruff]
+target-version = "py313"
+extend-exclude = ["experiments", "migrations"]
+
+[tool.ruff.lint]
+# Pyflakes (unused/undefined names) and syntax errors only; style rules are
+# not enforced yet to avoid a repository-wide reformat.
+select = ["F", "E9"]
+
+[tool.mypy]
+python_version = "3.13"
+packages = ["app.rag.evaluation"]
+explicit_package_bases = true
+ignore_missing_imports = true
+follow_imports = "silent"

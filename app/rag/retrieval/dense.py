@@ -228,8 +228,7 @@ class DenseRetriever:
                 request.profile.query_instruction,
                 request.filters.document_id,
                 request.filters.section,
-                request.filters.effective_date_from,
-                request.filters.effective_date_to,
+                *request.filters.effective_date_bounds(),
             )
 
     @staticmethod

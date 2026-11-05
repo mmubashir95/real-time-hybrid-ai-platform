@@ -9,7 +9,6 @@ Skipped unless TEST_DATABASE_URL points at a disposable database, for example:
 Each test works inside throwaway schemas that are dropped afterwards.
 """
 
-import os
 import unittest
 from pathlib import Path
 from uuid import uuid4
@@ -23,7 +22,8 @@ from app.models import Base
 from app.repositories.analysis_repository import get_analysis_by_id, save_analysis
 from app.schemas import AnalysisResult
 
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "")
+from database_gate import TEST_DATABASE_URL, requires_test_database
+
 SCHEMA_SQL = (Path(__file__).resolve().parent.parent / "schema.sql").read_text()
 PGVECTOR_MIGRATION_SQL = (
     Path(__file__).resolve().parent.parent
@@ -33,7 +33,7 @@ PGVECTOR_MIGRATION_SQL = (
 PGVECTOR_MIGRATION_STATEMENTS = PGVECTOR_MIGRATION_SQL.rsplit("\n\n", maxsplit=1)
 
 
-@unittest.skipUnless(TEST_DATABASE_URL, "TEST_DATABASE_URL is not set")
+@requires_test_database()
 class PostgresIntegrationTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         self.admin_engine = create_async_engine(TEST_DATABASE_URL)

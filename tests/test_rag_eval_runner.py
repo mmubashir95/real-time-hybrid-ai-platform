@@ -170,6 +170,32 @@ class EvaluationRunnerTests(unittest.TestCase):
         self.assertIn("Reranker truncated inputs: 2", report)
         self.assertIn("`Q1`", report)
 
+    def test_answerable_precision_and_ceiling_share_recall_denominator(self) -> None:
+        """Report precision over answerable questions next to its reachable maximum."""
+        a, b = candidate("A", 1, relevant=1), candidate("B", 2, relevant=1)
+        one_gold = build_question_result(
+            "Q1", EvaluationConfiguration.HYBRID, (a,), {a.evidence_key: 1}, 1.0
+        )
+        two_gold = build_question_result(
+            "Q2", EvaluationConfiguration.HYBRID, (a, b),
+            {a.evidence_key: 1, b.evidence_key: 1}, 1.0,
+        )
+        no_answer = build_question_result("Q3", EvaluationConfiguration.HYBRID, (), {}, 1.0)
+        self.assertEqual(two_gold.gold_evidence_count, 2)
+        self.assertIsNone(no_answer.gold_evidence_count)
+        aggregate = aggregate_question_results(
+            EvaluationConfiguration.HYBRID, (one_gold, two_gold, no_answer)
+        )
+        # All-question precision is diluted by the no-answer question's zero.
+        self.assertAlmostEqual(aggregate.precision_at_5, 0.2)
+        self.assertAlmostEqual(aggregate.answerable_precision_at_5, 0.3)
+        self.assertAlmostEqual(aggregate.precision_ceiling_at_5, 0.3)
+        self.assertAlmostEqual(aggregate.precision_ceiling_at_10, 0.15)
+        report = render_markdown_report(EvaluationArtifact(
+            metadata=_hybrid_artifact().metadata, retrieval_aggregate=aggregate,
+        ))
+        self.assertIn("(answerable only): 0.3000 of ceiling 0.3000", report)
+
     def test_candidate_set_mismatch_has_run_level_error_type(self) -> None:
         """Let callers abort a run instead of recording one failed question."""
         with self.assertRaises(CandidateSetMismatchError):

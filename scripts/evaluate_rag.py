@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -144,6 +145,7 @@ def build_artifact(
     live_grounded_answers: tuple[dict[str, object], ...] | None = None,
     live_reranker_runtime: RerankerRuntime | None = None,
     candidate_baseline: CandidateBaseline | None = None,
+    rrf_constant: int | None = None,
 ) -> EvaluationArtifact:
     """Validate all supplied evidence and assemble one immutable run artifact."""
     dataset = load_evaluation_dataset(
@@ -223,6 +225,7 @@ def build_artifact(
             embedding_model=arguments.embedding_model,
             reranker_model=arguments.reranker_model,
             reranker_runtime=live_reranker_runtime,
+            rrf_constant=rrf_constant,
             baseline_run_id=candidate_baseline.run_id if candidate_baseline else None,
             baseline_artifact_sha256=(
                 candidate_baseline.artifact_sha256 if candidate_baseline else None
@@ -274,6 +277,30 @@ def _section_key(headings: tuple[str, ...]) -> str:
     return ""
 
 
+def _retrieval_details(passage: object, rrf_constant: int | None) -> dict[str, object]:
+    """Return a passage's retrieval-stage ranks, scores, RRF parts, and text hash.
+
+    rrf_constant is None outside hybrid retrieval, where no fusion happened.
+    """
+    def component(rank: int | None) -> float | None:
+        """Recompute one branch's RRF contribution exactly as fusion did."""
+        if rrf_constant is None or rank is None:
+            return None
+        return 1.0 / (rrf_constant + rank)
+
+    return {
+        "retrieval_rank": passage.final_rank,
+        "bm25_rank": passage.bm25_rank,
+        "bm25_score": passage.bm25_score,
+        "semantic_rank": passage.semantic_rank,
+        "semantic_score": passage.semantic_score,
+        "fusion_score": passage.fusion_score,
+        "bm25_rrf_component": component(passage.bm25_rank),
+        "semantic_rrf_component": component(passage.semantic_rank),
+        "text_sha256": hashlib.sha256(passage.text.encode("utf-8")).hexdigest(),
+    }
+
+
 def _retrieved_candidates(passages: tuple) -> tuple[CandidateRecord, ...]:
     """Describe retrieved passages by identity only, for candidate-set checks."""
     return tuple(
@@ -312,7 +339,7 @@ async def _execute_live(
         Qwen3Reranker, RerankerConfig, RerankingService, RetrievalRerankingService,
     )
     from app.rag.retrieval import (
-        DenseRetriever, HistoricalVersionScope, KeywordRetriever, RetrievalService,
+        DEFAULT_RRF_CONSTANT, DenseRetriever, HistoricalVersionScope, KeywordRetriever, RetrievalService,
         SearchContextOrigin, SearchFilters, SearchMode, SearchRequest, TrustedSearchContext,
     )
     from app.rag.evaluation.runner import (
@@ -355,6 +382,7 @@ async def _execute_live(
         retrieval = RetrievalService(
             KeywordRetriever(connection, schema=arguments.schema),
             DenseRetriever(connection, encoder, schema=arguments.schema),
+            rrf_constant=DEFAULT_RRF_CONSTANT,
         )
         reranker = None
         grounded_service = None
@@ -412,15 +440,12 @@ async def _execute_live(
                     "relevance_grade": grade,
                     "credited_section_key": credited_section,
                 }
-            historical_evidence = next(
-                iter(question.gold_evidence), None
-            ) if question.question_type.value == "historical_version" else None
+            # Scope comes from the question input, never from gold_evidence,
+            # so the retriever is not told where the scored answer lives.
+            scope = question.historical_scope
             historical = (
-                HistoricalVersionScope(
-                    historical_evidence.document_id,
-                    historical_evidence.document_version,
-                )
-                if historical_evidence else None
+                HistoricalVersionScope(scope.document_id, scope.document_version)
+                if scope else None
             )
             context = TrustedSearchContext(
                 question.tenant_id, ("public",), SearchContextOrigin.INTERNAL,
@@ -550,6 +575,10 @@ async def _execute_live(
                                 item.tenant_id, item.document_id,
                                 item.document_version, item.section, item.text,
                             ),
+                            **_retrieval_details(
+                                item,
+                                DEFAULT_RRF_CONSTANT if mode is SearchMode.HYBRID else None,
+                            ),
                             score=(
                                 rerank_scores[item.chunk_id]
                                 if configuration is EvaluationConfiguration.HYBRID_RERANKED
@@ -616,6 +645,7 @@ def main(arguments: list[str] | None = None) -> int:
     try:
         live_results = live_operations = live_answers = live_runtime = None
         candidate_baseline = None
+        rrf_constant = None
         if parsed.execute_live:
             if parsed.question_results or parsed.operational_samples:
                 raise ValueError(
@@ -628,6 +658,14 @@ def main(arguments: list[str] | None = None) -> int:
             live_results, live_operations, live_answers, live_runtime = asyncio.run(
                 _execute_live(parsed, candidate_baseline)
             )
+            if parsed.configuration in {
+                EvaluationConfiguration.HYBRID.value,
+                EvaluationConfiguration.HYBRID_RERANKED.value,
+                EvaluationConfiguration.GROUNDED.value,
+            }:
+                from app.rag.retrieval import DEFAULT_RRF_CONSTANT
+
+                rrf_constant = DEFAULT_RRF_CONSTANT
         artifact = build_artifact(
             parsed,
             live_question_results=live_results,
@@ -635,6 +673,7 @@ def main(arguments: list[str] | None = None) -> int:
             live_grounded_answers=live_answers,
             live_reranker_runtime=live_runtime,
             candidate_baseline=candidate_baseline,
+            rrf_constant=rrf_constant,
         )
         run_directory = parsed.output_directory / artifact.metadata.run_id
         write_artifact(artifact, run_directory / "run.json")

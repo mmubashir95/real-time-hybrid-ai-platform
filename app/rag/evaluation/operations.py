@@ -73,6 +73,12 @@ def _sum_if_complete(samples: tuple[OperationalSample, ...], field: str) -> int 
     return sum(values) if values and all(value is not None for value in values) else None
 
 
+def _sum_tokens_if_complete(samples: tuple[OperationalSample, ...], field: str) -> int | None:
+    """Sum an integer token count only when every request reported it."""
+    total = _sum_if_complete(samples, field)
+    return None if total is None else int(total)
+
+
 def summarize_operations(samples: tuple[OperationalSample, ...]) -> OperationalSummary:
     """Aggregate measured operations without replacing unavailable values with zero."""
     latency_fields = (
@@ -103,12 +109,13 @@ def summarize_operations(samples: tuple[OperationalSample, ...]) -> OperationalS
         for outcome in RequestOutcome
         if outcome not in {RequestOutcome.SUCCESS, RequestOutcome.CORRECT_ABSTENTION}
     }
-    generation_input = _sum_if_complete(samples, "generation_input_tokens")
-    generation_output = _sum_if_complete(samples, "generation_output_tokens")
-    verification_input = _sum_if_complete(samples, "verification_input_tokens")
-    verification_output = _sum_if_complete(samples, "verification_output_tokens")
+    generation_input = _sum_tokens_if_complete(samples, "generation_input_tokens")
+    generation_output = _sum_tokens_if_complete(samples, "generation_output_tokens")
+    verification_input = _sum_tokens_if_complete(samples, "verification_input_tokens")
+    verification_output = _sum_tokens_if_complete(samples, "verification_output_tokens")
     token_parts = (generation_input, generation_output, verification_input, verification_output)
-    total_tokens = sum(token_parts) if all(value is not None for value in token_parts) else None
+    known_tokens = [value for value in token_parts if value is not None]
+    total_tokens = sum(known_tokens) if len(known_tokens) == len(token_parts) else None
     generation_cost = _sum_if_complete(samples, "generation_estimated_cost_usd")
     verification_cost = _sum_if_complete(samples, "verification_estimated_cost_usd")
     total_cost = (

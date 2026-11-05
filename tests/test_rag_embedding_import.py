@@ -11,7 +11,6 @@ from dataclasses import replace
 from datetime import date
 import io
 import json
-import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -38,6 +37,8 @@ from app.rag.persistence.importer import RagImportConflict, import_rag_embedding
 from app.rag.retrieval.verification import reconcile_import_plan
 from scripts.import_rag_embeddings import main
 
+from database_gate import TEST_DATABASE_URL, requires_test_database
+
 
 ROOT = Path(__file__).resolve().parent.parent
 # Migration 001 is database-scoped; applying it here lets each suite run on
@@ -48,7 +49,6 @@ LIFECYCLE_MIGRATION_SQL = (
     ROOT / "migrations" / "003_add_document_lifecycle.sql"
 ).read_text()
 INITIAL_SCHEMA_SQL = (ROOT / "schema.sql").read_text()
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "")
 MODEL_REVISION = "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a"
 
 
@@ -342,7 +342,7 @@ class ImportPlanMappingTests(unittest.TestCase):
                     )
 
 
-@unittest.skipUnless(TEST_DATABASE_URL, "TEST_DATABASE_URL is not set")
+@requires_test_database()
 class RagEmbeddingImportIntegrationTests(unittest.IsolatedAsyncioTestCase):
     """Exercise commits, retries, conflicts, rollback, and concurrency."""
 
