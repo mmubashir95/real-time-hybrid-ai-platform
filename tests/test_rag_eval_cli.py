@@ -1,0 +1,70 @@
+"""Verify the Phase 11 aggregation CLI without live RAG infrastructure."""
+
+from __future__ import annotations
+
+import importlib.util
+import io
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import patch
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _load_cli():
+    """Import the script without invoking its command-line main guard."""
+    spec = importlib.util.spec_from_file_location(
+        "evaluate_rag_phase11", ROOT / "scripts/evaluate_rag.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+CLI = _load_cli()
+
+
+def _arguments(output: Path) -> list[str]:
+    """Build the required reproducibility arguments for one candidate run."""
+    return [
+        "--split", "development",
+        "--configuration", "C",
+        "--output-directory", str(output),
+        "--corpus-snapshot", "manifest-sha",
+        "--index-version", "index-v1",
+        "--embedding-model", "embedding-model@revision",
+        "--test-environment", "unit-test",
+    ]
+
+
+class EvaluationCliTests(unittest.TestCase):
+    """Exercise approval gates and durable pending-result reports."""
+
+    def test_official_run_rejects_unapproved_dataset_before_writing(self) -> None:
+        """Prevent candidate labels from becoming official metrics."""
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            with patch("sys.stderr", io.StringIO()) as errors:
+                code = CLI.main(_arguments(output))
+            self.assertEqual(code, 1)
+            self.assertIn("approved dataset manifest", errors.getvalue())
+            self.assertEqual(list(output.iterdir()), [])
+
+    def test_exploratory_run_writes_pending_json_and_markdown(self) -> None:
+        """Create honest artifacts without fabricating unsupplied measurements."""
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            code = CLI.main([*_arguments(output), "--exploratory"])
+            run_directories = list(output.iterdir())
+            self.assertEqual(code, 0)
+            self.assertEqual(len(run_directories), 1)
+            report = (run_directories[0] / "report.md").read_text(encoding="utf-8")
+            self.assertTrue((run_directories[0] / "run.json").is_file())
+            self.assertIn("NOT MEASURED", report)
+            self.assertIn("PENDING HUMAN REVIEW", report)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,186 @@
+"""Build reproducible Phase 11 per-question and aggregate evaluation records."""
+
+from __future__ import annotations
+
+from enum import Enum
+from typing import Iterable
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.rag.evaluation.metrics import (
+    EvidenceKey,
+    RankedEvidence,
+    evaluate_ranking,
+    latency_percentiles,
+    mean_defined,
+)
+
+
+class EvaluationConfiguration(str, Enum):
+    """Name the five Phase 11 experiment configurations."""
+
+    DENSE = "A"
+    KEYWORD = "B"
+    HYBRID = "C"
+    HYBRID_RERANKED = "D"
+    GROUNDED = "E"
+
+
+class CandidateRecord(BaseModel):
+    """Preserve one ordered candidate and its stable source provenance."""
+
+    model_config = ConfigDict(frozen=True)
+
+    rank: int = Field(ge=1)
+    chunk_id: str
+    tenant_id: str
+    document_id: str
+    document_version: str
+    section_key: str
+    relevance_grade: int = Field(ge=0)
+    score: float | None = None
+
+    @property
+    def evidence_key(self) -> EvidenceKey:
+        """Return the source-level identity used by golden labels."""
+        return (
+            self.tenant_id,
+            self.document_id,
+            self.document_version,
+            self.section_key,
+        )
+
+
+class QuestionResult(BaseModel):
+    """Store inspectable results for one question and configuration."""
+
+    model_config = ConfigDict(frozen=True)
+
+    question_id: str
+    configuration: EvaluationConfiguration
+    candidates: tuple[CandidateRecord, ...]
+    precision_at_5: float
+    precision_at_10: float
+    recall_at_5: float | None
+    recall_at_10: float | None
+    recall_at_20: float | None
+    complete_evidence_coverage_at_5: bool | None
+    complete_evidence_coverage_at_10: bool | None
+    complete_evidence_coverage_at_20: bool | None
+    reciprocal_rank_at_10: float | None
+    ndcg_at_5: float | None
+    ndcg_at_10: float | None
+    latency_ms: float = Field(ge=0)
+    error_code: str | None = None
+
+
+class AggregateRetrievalResult(BaseModel):
+    """Aggregate a configuration while retaining explicit sample counts."""
+
+    model_config = ConfigDict(frozen=True)
+
+    configuration: EvaluationConfiguration
+    question_count: int
+    answerable_question_count: int
+    failed_question_count: int
+    precision_at_5: float | None
+    precision_at_10: float | None
+    recall_at_5: float | None
+    recall_at_10: float | None
+    recall_at_20: float | None
+    complete_evidence_coverage_at_5: float | None
+    complete_evidence_coverage_at_10: float | None
+    complete_evidence_coverage_at_20: float | None
+    mrr_at_10: float | None
+    ndcg_at_5: float | None
+    ndcg_at_10: float | None
+    latency_p50_ms: float | None
+    latency_p95_ms: float | None
+
+
+def build_question_result(
+    question_id: str,
+    configuration: EvaluationConfiguration,
+    candidates: tuple[CandidateRecord, ...],
+    gold_relevance: dict[EvidenceKey, int],
+    latency_ms: float,
+    *,
+    error_code: str | None = None,
+) -> QuestionResult:
+    """Calculate every required retrieval/ranking cutoff for one question."""
+    ranked = tuple(
+        RankedEvidence(item.evidence_key, item.relevance_grade) for item in candidates
+    )
+    at_5 = evaluate_ranking(ranked, gold_relevance, 5)
+    at_10 = evaluate_ranking(ranked, gold_relevance, 10)
+    at_20 = evaluate_ranking(ranked, gold_relevance, 20)
+    return QuestionResult(
+        question_id=question_id,
+        configuration=configuration,
+        candidates=candidates,
+        precision_at_5=at_5.precision_at_k,
+        precision_at_10=at_10.precision_at_k,
+        recall_at_5=at_5.recall_at_k,
+        recall_at_10=at_10.recall_at_k,
+        recall_at_20=at_20.recall_at_k,
+        complete_evidence_coverage_at_5=at_5.complete_evidence_coverage_at_k,
+        complete_evidence_coverage_at_10=at_10.complete_evidence_coverage_at_k,
+        complete_evidence_coverage_at_20=at_20.complete_evidence_coverage_at_k,
+        reciprocal_rank_at_10=at_10.reciprocal_rank_at_k,
+        ndcg_at_5=at_5.ndcg_at_k,
+        ndcg_at_10=at_10.ndcg_at_k,
+        latency_ms=latency_ms,
+        error_code=error_code,
+    )
+
+
+def aggregate_question_results(
+    configuration: EvaluationConfiguration,
+    results: Iterable[QuestionResult],
+) -> AggregateRetrievalResult:
+    """Aggregate only matching results and keep undefined denominators visible."""
+    items = tuple(results)
+    if any(item.configuration is not configuration for item in items):
+        raise ValueError("Cannot aggregate mixed evaluation configurations")
+    completed = tuple(item for item in items if item.error_code is None)
+    answerable = tuple(item for item in completed if item.recall_at_5 is not None)
+    percentiles = latency_percentiles(tuple(item.latency_ms for item in completed))
+
+    def coverage(name: str) -> float | None:
+        values = [getattr(item, name) for item in answerable]
+        return sum(bool(value) for value in values) / len(values) if values else None
+
+    return AggregateRetrievalResult(
+        configuration=configuration,
+        question_count=len(items),
+        answerable_question_count=len(answerable),
+        failed_question_count=len(items) - len(completed),
+        precision_at_5=mean_defined(tuple(item.precision_at_5 for item in completed)),
+        precision_at_10=mean_defined(tuple(item.precision_at_10 for item in completed)),
+        recall_at_5=mean_defined(tuple(item.recall_at_5 for item in answerable)),
+        recall_at_10=mean_defined(tuple(item.recall_at_10 for item in answerable)),
+        recall_at_20=mean_defined(tuple(item.recall_at_20 for item in answerable)),
+        complete_evidence_coverage_at_5=coverage("complete_evidence_coverage_at_5"),
+        complete_evidence_coverage_at_10=coverage("complete_evidence_coverage_at_10"),
+        complete_evidence_coverage_at_20=coverage("complete_evidence_coverage_at_20"),
+        mrr_at_10=mean_defined(tuple(item.reciprocal_rank_at_10 for item in answerable)),
+        ndcg_at_5=mean_defined(tuple(item.ndcg_at_5 for item in answerable)),
+        ndcg_at_10=mean_defined(tuple(item.ndcg_at_10 for item in answerable)),
+        latency_p50_ms=percentiles[0] if percentiles else None,
+        latency_p95_ms=percentiles[1] if percentiles else None,
+    )
+
+
+def assert_fixed_candidate_set(
+    baseline: tuple[CandidateRecord, ...],
+    reranked: tuple[CandidateRecord, ...],
+) -> None:
+    """Reject unfair reranker comparisons that add or remove candidates."""
+    baseline_ids = [item.chunk_id for item in baseline]
+    reranked_ids = [item.chunk_id for item in reranked]
+    if len(baseline_ids) != len(set(baseline_ids)):
+        raise ValueError("Baseline candidates must have unique chunk IDs")
+    if len(reranked_ids) != len(set(reranked_ids)):
+        raise ValueError("Reranked candidates must have unique chunk IDs")
+    if set(baseline_ids) != set(reranked_ids):
+        raise ValueError("Reranker comparison must preserve the candidate set")
