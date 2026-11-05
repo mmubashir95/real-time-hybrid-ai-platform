@@ -14,6 +14,27 @@ from app.rag.evaluation.operations import OperationalSummary
 from app.rag.evaluation.runner import AggregateRetrievalResult, QuestionResult
 
 
+class RerankerRuntime(BaseModel):
+    """Record how the reranker actually ran, since ranking depends on it.
+
+    Precision is the configured value; "auto" resolves to float32 on CPU and to
+    the checkpoint dtype (bfloat16) on accelerators. truncated_inputs is None
+    when the pipeline does not expose per-call reranker diagnostics.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    device: str
+    precision: str
+    batch_size: int = Field(gt=0)
+    max_length: int = Field(gt=0)
+    model_load_seconds: float = Field(ge=0)
+    truncated_inputs: int | None = Field(default=None, ge=0)
+    # The first question pays one-time inference warm-up, so its latency is
+    # not representative of steady-state reranking.
+    warmup_question_id: str | None = None
+
+
 class RunMetadata(BaseModel):
     """Freeze the identities and configuration required to reproduce one run."""
 
@@ -29,6 +50,7 @@ class RunMetadata(BaseModel):
     index_version: str
     embedding_model: str
     reranker_model: str | None = None
+    reranker_runtime: RerankerRuntime | None = None
     llm_model: str | None = None
     prompt_version: str | None = None
     evaluation_configuration: str
@@ -90,10 +112,27 @@ def render_markdown_report(artifact: EvaluationArtifact) -> str:
         f"- Corpus snapshot: `{metadata.corpus_snapshot}`",
         f"- Index version: `{metadata.index_version}`",
         f"- Test environment: {metadata.test_environment}",
+    ]
+    runtime = metadata.reranker_runtime
+    if runtime is not None:
+        truncated = (
+            "NOT MEASURED" if runtime.truncated_inputs is None
+            else str(runtime.truncated_inputs)
+        )
+        lines.extend([
+            f"- Reranker: `{metadata.reranker_model}` on `{runtime.device}`, "
+            f"precision `{runtime.precision}`, batch size {runtime.batch_size}, "
+            f"max length {runtime.max_length}",
+            f"- Reranker model load seconds: {runtime.model_load_seconds:.2f}",
+            f"- Reranker truncated inputs: {truncated}",
+            f"- Warm-up question (latency includes first-inference cost): "
+            f"`{runtime.warmup_question_id}`",
+        ])
+    lines.extend([
         "",
         "## Retrieval and ranking",
         "",
-    ]
+    ])
     if retrieval is None:
         lines.append("NOT MEASURED")
     else:

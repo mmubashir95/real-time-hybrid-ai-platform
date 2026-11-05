@@ -9,6 +9,7 @@ import unittest
 from app.rag.evaluation.dataset import GoldEvidence
 from app.rag.evaluation.reporting import (
     EvaluationArtifact,
+    RerankerRuntime,
     RunMetadata,
     read_artifact,
     render_markdown_report,
@@ -141,6 +142,31 @@ class EvaluationRunnerTests(unittest.TestCase):
         self.assertEqual(loaded.metadata.run_id, "run-1")
         self.assertIn("NOT MEASURED", report)
         self.assertIn("PENDING HUMAN REVIEW", report)
+
+    def test_reranker_runtime_round_trips_and_is_reported(self) -> None:
+        """Persist reranker device, precision, truncation, and warm-up identity."""
+        artifact = EvaluationArtifact(metadata=RunMetadata(
+            run_id="run-2", timestamp="2026-11-05T12:00:00Z",
+            dataset_id="dataset", dataset_version="1.1.0",
+            dataset_split="development", dataset_sha256="a" * 64,
+            corpus_snapshot="manifest-sha", index_version="index-1",
+            embedding_model="embedding", reranker_model="reranker@rev",
+            reranker_runtime=RerankerRuntime(
+                device="mps", precision="bfloat16", batch_size=4, max_length=1024,
+                model_load_seconds=3.5, truncated_inputs=2, warmup_question_id="Q1",
+            ),
+            evaluation_configuration="D", candidate_limit=20,
+            test_environment="unit-test",
+        ))
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "run.json"
+            write_artifact(artifact, path)
+            loaded = read_artifact(path)
+        self.assertEqual(loaded.metadata.reranker_runtime, artifact.metadata.reranker_runtime)
+        report = render_markdown_report(loaded)
+        self.assertIn("precision `bfloat16`", report)
+        self.assertIn("Reranker truncated inputs: 2", report)
+        self.assertIn("`Q1`", report)
 
 
 if __name__ == "__main__":

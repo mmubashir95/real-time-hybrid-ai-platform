@@ -21,6 +21,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.rag.evaluation.dataset import load_evaluation_dataset  # noqa: E402
 from app.rag.evaluation.reporting import (  # noqa: E402
     EvaluationArtifact,
+    RerankerRuntime,
     RunMetadata,
     new_timestamp,
     write_artifact,
@@ -75,6 +76,10 @@ def parse_args(arguments: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--config-fingerprint")
     parser.add_argument("--embedding-device", default="cpu")
     parser.add_argument("--reranker-device", choices=("cpu", "mps"), default="cpu")
+    parser.add_argument(
+        "--reranker-precision",
+        choices=("auto", "float32", "float16", "bfloat16"), default="auto",
+    )
     parser.add_argument("--local-files-only", action="store_true")
     return parser.parse_args(arguments)
 
@@ -129,6 +134,7 @@ def build_artifact(
     live_question_results: tuple[QuestionResult, ...] | None = None,
     live_operational_samples: tuple[OperationalSample, ...] | None = None,
     live_grounded_answers: tuple[dict[str, object], ...] | None = None,
+    live_reranker_runtime: RerankerRuntime | None = None,
 ) -> EvaluationArtifact:
     """Validate all supplied evidence and assemble one immutable run artifact."""
     dataset = load_evaluation_dataset(
@@ -207,6 +213,7 @@ def build_artifact(
             index_version=arguments.index_version,
             embedding_model=arguments.embedding_model,
             reranker_model=arguments.reranker_model,
+            reranker_runtime=live_reranker_runtime,
             llm_model=arguments.llm_model,
             prompt_version=arguments.prompt_version,
             evaluation_configuration=configuration.value,
@@ -237,6 +244,7 @@ async def _execute_live(
     tuple[QuestionResult, ...],
     tuple[OperationalSample, ...],
     tuple[dict[str, object], ...],
+    RerankerRuntime | None,
 ]:
     """Execute A–E through existing RAG services without duplicating their logic."""
     # Heavy database and model imports stay inside this opt-in path so dataset
@@ -306,6 +314,7 @@ async def _execute_live(
         }:
             reranker_config = RerankerConfig(
                 device=arguments.reranker_device,
+                precision=arguments.reranker_precision,
                 local_files_only=arguments.local_files_only,
             )
             expected_reranker_identity = (
@@ -316,7 +325,8 @@ async def _execute_live(
                     "--reranker-model must match the configured model and pinned revision: "
                     f"{expected_reranker_identity}"
                 )
-            reranker = RerankingService(Qwen3Reranker(reranker_config))
+            reranker_scorer = Qwen3Reranker(reranker_config)
+            reranker = RerankingService(reranker_scorer)
         if configuration is EvaluationConfiguration.GROUNDED:
             settings = load_rag_generation_settings()
             if arguments.llm_model != settings.openai_model:
@@ -330,6 +340,11 @@ async def _execute_live(
         question_results: list[QuestionResult] = []
         operation_samples: list[OperationalSample] = []
         grounded_answers: list[dict[str, object]] = []
+        # Grounded answers (E) do not expose reranker diagnostics, so truncation
+        # is counted only for D and stays unmeasured for E.
+        truncated_inputs: int | None = (
+            0 if configuration is EvaluationConfiguration.HYBRID_RERANKED else None
+        )
         for question in questions:
             gold = gold_relevance(question.gold_evidence)
 
@@ -467,6 +482,7 @@ async def _execute_live(
                             for item in reranked.results
                         }
                         latency_ms += reranked.diagnostics.inference_seconds * 1_000
+                        truncated_inputs += reranked.diagnostics.truncated_inputs
                     candidates = tuple(
                         CandidateRecord(
                             rank=rank, chunk_id=item.chunk_id,
@@ -516,10 +532,22 @@ async def _execute_live(
                     question_id=question.question_id, end_to_end_ms=elapsed_ms,
                     outcome=RequestOutcome.UNHANDLED_ERROR,
                 ))
+        reranker_runtime = None
+        if reranker is not None:
+            reranker_runtime = RerankerRuntime(
+                device=reranker_config.device,
+                precision=reranker_config.precision,
+                batch_size=reranker_config.batch_size,
+                max_length=reranker_config.max_length,
+                model_load_seconds=reranker_scorer.model_load_seconds,
+                truncated_inputs=truncated_inputs,
+                warmup_question_id=questions[0].question_id if questions else None,
+            )
         return (
             tuple(question_results),
             tuple(operation_samples),
             tuple(grounded_answers),
+            reranker_runtime,
         )
     finally:
         await connection.close()
@@ -529,13 +557,13 @@ def main(arguments: list[str] | None = None) -> int:
     """Write JSON and Markdown artifacts, or report one controlled validation error."""
     parsed = parse_args(arguments)
     try:
-        live_results = live_operations = live_answers = None
+        live_results = live_operations = live_answers = live_runtime = None
         if parsed.execute_live:
             if parsed.question_results or parsed.operational_samples:
                 raise ValueError(
                     "--execute-live cannot be combined with supplied result samples"
                 )
-            live_results, live_operations, live_answers = asyncio.run(
+            live_results, live_operations, live_answers, live_runtime = asyncio.run(
                 _execute_live(parsed)
             )
         artifact = build_artifact(
@@ -543,6 +571,7 @@ def main(arguments: list[str] | None = None) -> int:
             live_question_results=live_results,
             live_operational_samples=live_operations,
             live_grounded_answers=live_answers,
+            live_reranker_runtime=live_runtime,
         )
         run_directory = parsed.output_directory / artifact.metadata.run_id
         write_artifact(artifact, run_directory / "run.json")
